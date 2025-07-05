@@ -171,11 +171,13 @@ function cf_smart_cache_fetch_zones() {
 
 function cf_smart_cache_email_render() {
     $options = get_option('cf_smart_cache_settings');
-    echo "<input type='email' name='cf_smart_cache_settings[cf_smart_cache_email]' value='" . esc_attr($options['cf_smart_cache_email'] ?? '') . "' class='regular-text' placeholder='" . esc_attr(__('Enter your email', 'cf-smart-cache')) . "'>";
+    echo "<input type='email' name='cf_smart_cache_settings[cf_smart_cache_email]' value='" . esc_attr($options['cf_smart_cache_email'] ?? '') . "' class='regular-text'>";
+    echo "<p class='description'>" . esc_html(__('Enter the email associated with your Cloudflare account.', 'cf-smart-cache')) . "</p>";
 }
 function cf_smart_cache_global_api_key_render() {
     $options = get_option('cf_smart_cache_settings');
-    echo "<input type='password' name='cf_smart_cache_settings[cf_smart_cache_global_api_key]' value='" . esc_attr($options['cf_smart_cache_global_api_key'] ?? '') . "' class='regular-text' placeholder='" . esc_attr(__('Enter your API key', 'cf-smart-cache')) . "'>";
+    echo "<input type='password' name='cf_smart_cache_settings[cf_smart_cache_global_api_key]' value='" . esc_attr($options['cf_smart_cache_global_api_key'] ?? '') . "' class='regular-text'>";
+    echo "<p class='description'>" . esc_html(__('Enter your Cloudflare API key. This is required for API access.', 'cf-smart-cache')) . "</p>";
 }
 function cf_smart_cache_zone_id_render() {
     $options = get_option( 'cf_smart_cache_settings' );
@@ -401,3 +403,43 @@ function cf_smart_cache_add_manual_purge_menu() {
     );
 }
 add_action('admin_menu', 'cf_smart_cache_add_manual_purge_menu');
+
+// Include a 'Test API Connection' button
+function cf_smart_cache_test_api_connection() {
+    if (isset($_POST['cf_smart_cache_test_api']) && check_admin_referer('cf_smart_cache_test_api_action')) {
+        $settings = get_option('cf_smart_cache_settings');
+        $api_token = $settings['cf_smart_cache_api_token'] ?? '';
+        $response = wp_remote_get('https://api.cloudflare.com/client/v4/user/tokens/verify', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_token,
+                'Content-Type' => 'application/json'
+            ],
+            'timeout' => 15,
+        ]);
+        if (is_wp_error($response)) {
+            echo '<div class="error"><p>' . esc_html(__('API connection failed: ', 'cf-smart-cache')) . esc_html($response->get_error_message()) . '</p></div>';
+        } else {
+            $body = json_decode(wp_remote_retrieve_body($response), true);
+            if (isset($body['success']) && $body['success']) {
+                echo '<div class="updated"><p>' . esc_html(__('API connection successful!', 'cf-smart-cache')) . '</p></div>';
+            } else {
+                echo '<div class="error"><p>' . esc_html(__('API connection failed: Invalid token.', 'cf-smart-cache')) . '</p></div>';
+            }
+        }
+    }
+}
+add_action('admin_notices', 'cf_smart_cache_test_api_connection');
+
+// Provide a dashboard widget to display cache statistics
+function cf_smart_cache_dashboard_widget() {
+    wp_add_dashboard_widget(
+        'cf_smart_cache_widget',
+        __('Cloudflare Smart Cache Statistics', 'cf-smart-cache'),
+        'cf_smart_cache_dashboard_widget_display'
+    );
+}
+add_action('wp_dashboard_setup', 'cf_smart_cache_dashboard_widget');
+
+function cf_smart_cache_dashboard_widget_display() {
+    echo '<p>' . esc_html(__('Cache statistics will be displayed here in future updates.', 'cf-smart-cache')) . '</p>';
+}

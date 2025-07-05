@@ -19,9 +19,9 @@
 - [x] Provide a `.pot` file for translations.
 
 ## 5. Enhance Admin Interface
-- [ ] Add tooltips or help text for each setting field.
-- [ ] Include a "Test API Connection" button to verify credentials.
-- [ ] Provide a dashboard widget to display cache statistics.
+- [x] Add tooltips or help text for each setting field.
+- [x] Include a "Test API Connection" button to verify credentials.
+- [x] Provide a dashboard widget to display cache statistics.
 
 ## 6. Add Compatibility with Modern WordPress Features
 - [ ] Add a REST API endpoint for cache purging.
