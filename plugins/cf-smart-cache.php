@@ -170,8 +170,12 @@ function cf_smart_cache_fetch_zones() {
 }
 
 function cf_smart_cache_email_render() {
-    $options = get_option( 'cf_smart_cache_settings' );
-    echo "<input type='email' name='cf_smart_cache_settings[cf_smart_cache_email]' value='" . esc_attr( $options['cf_smart_cache_email'] ?? '' ) . "' class='regular-text'>";
+    $options = get_option('cf_smart_cache_settings');
+    echo "<input type='email' name='cf_smart_cache_settings[cf_smart_cache_email]' value='" . esc_attr($options['cf_smart_cache_email'] ?? '') . "' class='regular-text' placeholder='" . esc_attr(__('Enter your email', 'cf-smart-cache')) . "'>";
+}
+function cf_smart_cache_global_api_key_render() {
+    $options = get_option('cf_smart_cache_settings');
+    echo "<input type='password' name='cf_smart_cache_settings[cf_smart_cache_global_api_key]' value='" . esc_attr($options['cf_smart_cache_global_api_key'] ?? '') . "' class='regular-text' placeholder='" . esc_attr(__('Enter your API key', 'cf-smart-cache')) . "'>";
 }
 function cf_smart_cache_zone_id_render() {
     $options = get_option( 'cf_smart_cache_settings' );
@@ -179,18 +183,18 @@ function cf_smart_cache_zone_id_render() {
     $zones_data = cf_smart_cache_fetch_zones();
     if ( is_wp_error( $zones_data ) ) {
         if ( $zones_data->get_error_code() === 'missing_creds' ) {
-            echo '<p class="description">Please enter and save your email and global API key first. The available zone list will appear here after saving.</p>';
+            echo '<p class="description">' . esc_html(__('Please enter and save your email and API token first. The available zone list will appear here after saving.', 'cf-smart-cache')) . '</p>';
         } else {
-            echo '<p class="description" style="color: #d63638;"><strong>Error:</strong> Failed to fetch zone list. ' . esc_html( $zones_data->get_error_message() ) . '</p>';
+            echo '<p class="description" style="color: #d63638;"><strong>' . esc_html(__('Error:', 'cf-smart-cache')) . '</strong> ' . esc_html($zones_data->get_error_message()) . '</p>';
         }
         return;
     }
     if ( empty( $zones_data ) ) {
-        echo '<p class="description">No zones found for this account.</p>';
+        echo '<p class="description">' . esc_html(__('No zones found for this account.', 'cf-smart-cache')) . '</p>';
         return;
     }
     echo "<select name='cf_smart_cache_settings[cf_smart_cache_zone_id]'>";
-    echo "<option value=''>-- Select a zone --</option>";
+    echo "<option value=''>" . esc_html(__('-- Select a zone --', 'cf-smart-cache')) . "</option>";
     foreach ( $zones_data as $zone ) {
         printf(
             '<option value="%s" %s>%s</option>',
@@ -201,7 +205,7 @@ function cf_smart_cache_zone_id_render() {
     }
     echo "</select>";
     $refresh_url = wp_nonce_url( menu_page_url( 'cf_smart_cache', false ) . '&refresh_zones=true', 'cf-smart-cache-refresh-zones' );
-    echo " <a href='" . esc_url( $refresh_url ) . "'>Refresh List</a>";
+    echo " <a href='" . esc_url( $refresh_url ) . "'>" . esc_html(__('Refresh List', 'cf-smart-cache')) . "</a>";
 }
 function cf_smart_cache_options_page_html() {
     ?>

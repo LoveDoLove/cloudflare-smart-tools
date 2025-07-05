@@ -15,8 +15,8 @@
 - [x] Add an option for manual cache purging in the admin panel.
 
 ## 4. Add Internationalization (i18n)
-- [ ] Use WordPress translation functions (`__()` and `_e()`) for all user-facing text.
-- [ ] Provide a `.pot` file for translations.
+- [x] Use WordPress translation functions (`__()` and `_e()`) for all user-facing text.
+- [x] Provide a `.pot` file for translations.
 
 ## 5. Enhance Admin Interface
 - [ ] Add tooltips or help text for each setting field.
