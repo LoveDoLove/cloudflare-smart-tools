@@ -24,8 +24,8 @@
 - [x] Provide a dashboard widget to display cache statistics.
 
 ## 6. Add Compatibility with Modern WordPress Features
-- [ ] Add a REST API endpoint for cache purging.
-- [ ] Create a Gutenberg block for manual cache purging.
+- [x] Add a REST API endpoint for cache purging.
+- [x] Create a Gutenberg block for manual cache purging.
 
 ## 7. Performance Improvements
 - [ ] Use non-blocking asynchronous requests for API calls.

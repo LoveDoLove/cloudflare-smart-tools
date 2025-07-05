@@ -443,3 +443,51 @@ add_action('wp_dashboard_setup', 'cf_smart_cache_dashboard_widget');
 function cf_smart_cache_dashboard_widget_display() {
     echo '<p>' . esc_html(__('Cache statistics will be displayed here in future updates.', 'cf-smart-cache')) . '</p>';
 }
+
+// Add a REST API endpoint for cache purging
+function cf_smart_cache_register_rest_routes() {
+    register_rest_route('cf-smart-cache/v1', '/purge', [
+        'methods' => 'POST',
+        'callback' => 'cf_smart_cache_rest_purge',
+        'permission_callback' => function () {
+            return current_user_can('manage_options');
+        },
+    ]);
+}
+add_action('rest_api_init', 'cf_smart_cache_register_rest_routes');
+
+function cf_smart_cache_rest_purge(WP_REST_Request $request) {
+    $urls = $request->get_param('urls');
+    if (empty($urls) || !is_array($urls)) {
+        return new WP_REST_Response(['error' => __('Invalid URLs provided.', 'cf-smart-cache')], 400);
+    }
+    cf_smart_cache_purge_specific_urls($urls);
+    return new WP_REST_Response(['success' => __('Cache purged successfully.', 'cf-smart-cache')], 200);
+}
+
+// Create a Gutenberg block for manual cache purging
+function cf_smart_cache_register_block() {
+    wp_register_script(
+        'cf-smart-cache-block',
+        plugins_url('block.js', __FILE__),
+        ['wp-blocks', 'wp-element', 'wp-editor'],
+        filemtime(plugin_dir_path(__FILE__) . 'block.js')
+    );
+
+    register_block_type('cf-smart-cache/manual-purge', [
+        'editor_script' => 'cf-smart-cache-block',
+        'render_callback' => 'cf_smart_cache_render_block',
+    ]);
+}
+add_action('init', 'cf_smart_cache_register_block');
+
+function cf_smart_cache_render_block($attributes) {
+    ob_start();
+    ?>
+    <form method="post" action="<?php echo esc_url(rest_url('cf-smart-cache/v1/purge')); ?>">
+        <textarea name="urls" rows="5" placeholder="<?php echo esc_attr(__('Enter one URL per line...', 'cf-smart-cache')); ?>"></textarea>
+        <button type="submit">Purge Cache</button>
+    </form>
+    <?php
+    return ob_get_clean();
+}
