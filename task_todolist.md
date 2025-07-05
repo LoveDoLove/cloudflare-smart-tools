@@ -11,8 +11,8 @@
 - [x] Implement retry logic for transient API errors.
 
 ## 3. Optimize Cache Purging
-- [ ] Implement selective cache purging based on updated content.
-- [ ] Add an option for manual cache purging in the admin panel.
+- [x] Implement selective cache purging based on updated content.
+- [x] Add an option for manual cache purging in the admin panel.
 
 ## 4. Add Internationalization (i18n)
 - [ ] Use WordPress translation functions (`__()` and `_e()`) for all user-facing text.

@@ -320,3 +320,80 @@ function cf_smart_cache_display_admin_notice() {
     }
 }
 add_action( 'admin_notices', 'cf_smart_cache_display_admin_notice' );
+
+// Implement selective cache purging based on updated content
+function cf_smart_cache_purge_specific_urls($urls_to_purge) {
+    if (empty($urls_to_purge)) {
+        return;
+    }
+
+    $settings = get_option('cf_smart_cache_settings');
+    $api_token = $settings['cf_smart_cache_api_token'] ?? '';
+    $zone_id = $settings['cf_smart_cache_zone_id'] ?? '';
+
+    if (empty($api_token) || empty($zone_id)) {
+        cf_smart_cache_log_error('API Token or Zone ID is missing.');
+        return;
+    }
+
+    $urls_to_purge = array_values(array_unique($urls_to_purge));
+    $api_url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache";
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_token,
+        'Content-Type' => 'application/json'
+    ];
+
+    $response = wp_remote_post($api_url, [
+        'method' => 'POST',
+        'headers' => $headers,
+        'body' => json_encode(['files' => $urls_to_purge]),
+        'timeout' => 15
+    ]);
+
+    if (is_wp_error($response)) {
+        cf_smart_cache_log_error('Purge API Error: ' . $response->get_error_message());
+    } else {
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (isset($body['success']) && $body['success']) {
+            cf_smart_cache_log_error('Successfully purged specific URLs.');
+        } else {
+            $error_message = $body['errors'][0]['message'] ?? 'Unknown API error.';
+            cf_smart_cache_log_error('Purge API Error: ' . $error_message);
+        }
+    }
+}
+
+// Add an option for manual cache purging in the admin panel
+function cf_smart_cache_manual_purge_page() {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    if (isset($_POST['cf_smart_cache_manual_purge']) && check_admin_referer('cf_smart_cache_manual_purge_action')) {
+        $urls = explode("\n", sanitize_textarea_field($_POST['cf_smart_cache_urls']));
+        $urls = array_map('trim', $urls);
+        cf_smart_cache_purge_specific_urls($urls);
+        echo '<div class="updated"><p>Cache purged for the provided URLs.</p></div>';
+    }
+
+    echo '<div class="wrap">';
+    echo '<h1>Manual Cache Purge</h1>';
+    echo '<form method="post">';
+    wp_nonce_field('cf_smart_cache_manual_purge_action');
+    echo '<textarea name="cf_smart_cache_urls" rows="10" cols="50" class="large-text" placeholder="Enter one URL per line..."></textarea><br>'; 
+    echo '<input type="submit" name="cf_smart_cache_manual_purge" class="button-primary" value="Purge Cache">';
+    echo '</form>';
+    echo '</div>';
+}
+
+function cf_smart_cache_add_manual_purge_menu() {
+    add_submenu_page(
+        'options-general.php',
+        'Manual Cache Purge',
+        'Manual Cache Purge',
+        'manage_options',
+        'cf_smart_cache_manual_purge',
+        'cf_smart_cache_manual_purge_page'
+    );
+}
+add_action('admin_menu', 'cf_smart_cache_add_manual_purge_menu');
