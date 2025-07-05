@@ -28,8 +28,8 @@
 - [x] Create a Gutenberg block for manual cache purging.
 
 ## 7. Performance Improvements
-- [ ] Use non-blocking asynchronous requests for API calls.
-- [ ] Cache API responses for longer durations where applicable.
+- [x] Use non-blocking asynchronous requests for API calls.
+- [x] Cache API responses for longer durations where applicable.
 
 ## 8. Add Unit and Integration Tests
 - [ ] Write unit tests for core functions using PHPUnit.

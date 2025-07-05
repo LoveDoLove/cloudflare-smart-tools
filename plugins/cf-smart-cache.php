@@ -122,15 +122,25 @@ function cf_smart_cache_log_error($message) {
     }
 }
 
+// ===================== Performance Improvements =====================
 // Use non-blocking asynchronous requests for API calls
-function cf_smart_cache_async_request($url, $headers, $body = null) {
-    $args = [
-        'method' => $body ? 'POST' : 'GET',
-        'headers' => $headers,
-        'body' => $body ? json_encode($body) : null,
-        'timeout' => 0.01, // Non-blocking
-    ];
-    wp_remote_request($url, $args);
+function cf_smart_cache_async_request($url, $args = array()) {
+    $default_args = array(
+        'timeout' => 0.01, // Set a very low timeout for non-blocking
+        'blocking' => false, // Ensure the request is non-blocking
+    );
+    $args = wp_parse_args($args, $default_args);
+    wp_remote_post($url, $args);
+}
+
+// Cache API responses for longer durations (1 day)
+function cf_smart_cache_get_cached_response($key, $callback, $expiration = DAY_IN_SECONDS) {
+    $cached_response = get_transient($key);
+    if ($cached_response === false) {
+        $cached_response = call_user_func($callback);
+        set_transient($key, $cached_response, $expiration);
+    }
+    return $cached_response;
 }
 
 // Cache API responses for longer durations
