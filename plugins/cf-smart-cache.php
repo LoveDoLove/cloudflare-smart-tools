@@ -1,4 +1,3 @@
-
 <?php
 /**
  * Plugin Name:       Cloudflare Smart Cache
@@ -94,6 +93,13 @@ function cf_smart_cache_add_admin_menu() {
 }
 add_action( 'admin_menu', 'cf_smart_cache_add_admin_menu' );
 
+// Update settings to use API Tokens instead of Global API Key
+function cf_smart_cache_api_token_render() {
+    $options = get_option( 'cf_smart_cache_settings' );
+    echo "<input type='password' name='cf_smart_cache_settings[cf_smart_cache_api_token]' value='" . esc_attr( $options['cf_smart_cache_api_token'] ?? '' ) . "' class='regular-text'>";
+}
+
+// Update the settings initialization to include API Token
 function cf_smart_cache_settings_init() {
     if ( isset( $_GET['page'] ) && $_GET['page'] === 'cf_smart_cache' && isset( $_GET['refresh_zones'] ) && $_GET['refresh_zones'] === 'true' ) {
         check_admin_referer( 'cf-smart-cache-refresh-zones' );
@@ -105,11 +111,11 @@ function cf_smart_cache_settings_init() {
     register_setting( 'cf_smart_cache_options_group', 'cf_smart_cache_settings' );
     add_settings_section('cf_smart_cache_api_section', 'Cloudflare API Credentials', null, 'cf_smart_cache');
     add_settings_field('cf_smart_cache_email', 'Cloudflare Account Email', 'cf_smart_cache_email_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
-    add_settings_field('cf_smart_cache_global_api_key', 'Global API Key', 'cf_smart_cache_global_api_key_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
+    add_settings_field('cf_smart_cache_api_token', 'API Token', 'cf_smart_cache_api_token_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
     add_settings_field('cf_smart_cache_zone_id', 'Zone', 'cf_smart_cache_zone_id_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
 }
-add_action( 'admin_init', 'cf_smart_cache_settings_init' );
 
+// Update API calls to use API Token
 function cf_smart_cache_fetch_zones() {
     $cached_zones = get_transient( 'cf_smart_cache_zone_list' );
     if ( false !== $cached_zones ) {
@@ -117,14 +123,13 @@ function cf_smart_cache_fetch_zones() {
     }
     $settings = get_option('cf_smart_cache_settings');
     $email    = $settings['cf_smart_cache_email'] ?? '';
-    $api_key  = $settings['cf_smart_cache_global_api_key'] ?? '';
-    if ( empty($email) || empty($api_key) ) {
+    $api_token = $settings['cf_smart_cache_api_token'] ?? '';
+    if ( empty($email) || empty($api_token) ) {
         return new WP_Error( 'missing_creds', 'API credentials not set.' );
     }
     $response = wp_remote_get( 'https://api.cloudflare.com/client/v4/zones', [
         'headers' => [
-            'X-Auth-Email' => $email,
-            'X-Auth-Key' => $api_key,
+            'Authorization' => 'Bearer ' . $api_token,
             'Content-Type' => 'application/json'
         ],
         'timeout' => 15,
@@ -144,10 +149,6 @@ function cf_smart_cache_fetch_zones() {
 function cf_smart_cache_email_render() {
     $options = get_option( 'cf_smart_cache_settings' );
     echo "<input type='email' name='cf_smart_cache_settings[cf_smart_cache_email]' value='" . esc_attr( $options['cf_smart_cache_email'] ?? '' ) . "' class='regular-text'>";
-}
-function cf_smart_cache_global_api_key_render() {
-    $options = get_option( 'cf_smart_cache_settings' );
-    echo "<input type='password' name='cf_smart_cache_settings[cf_smart_cache_global_api_key]' value='" . esc_attr( $options['cf_smart_cache_global_api_key'] ?? '' ) . "' class='regular-text'>";
 }
 function cf_smart_cache_zone_id_render() {
     $options = get_option( 'cf_smart_cache_settings' );

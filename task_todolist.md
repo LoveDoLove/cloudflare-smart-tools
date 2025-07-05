@@ -1,9 +1,9 @@
 # Task To-Do List for Improving Cloudflare Smart Cache Plugin
 
 ## 1. Enhance Security
-- [ ] Replace Global API Key with API Tokens for better security.
-- [ ] Update settings page to accept API Tokens.
-- [ ] Validate API Token scope during setup.
+- [x] Replace Global API Key with API Tokens for better security.
+- [x] Update settings page to accept API Tokens.
+- [x] Validate API Token scope during setup.
 
 ## 2. Improve Error Handling
 - [ ] Add detailed error logging for API failures.
