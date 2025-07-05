@@ -6,9 +6,9 @@
 - [x] Validate API Token scope during setup.
 
 ## 2. Improve Error Handling
-- [ ] Add detailed error logging for API failures.
-- [ ] Display user-friendly error messages in the admin panel.
-- [ ] Implement retry logic for transient API errors.
+- [x] Add detailed error logging for API failures.
+- [x] Display user-friendly error messages in the admin panel.
+- [x] Implement retry logic for transient API errors.
 
 ## 3. Optimize Cache Purging
 - [ ] Implement selective cache purging based on updated content.
