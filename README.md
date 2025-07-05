@@ -43,6 +43,8 @@
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
+    <li><a href="#faqs">FAQs</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
   </ol>
 </details>
 
@@ -151,6 +153,36 @@ Project Link: [https://github.com/LoveDoLove/cloudflare-smart-cache](https://git
 - [Cloudflare](https://www.cloudflare.com/)
 - [WordPress](https://wordpress.org/)
 - [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## FAQs
+
+### Why is my cache not purging?
+Ensure that your API Token has the correct permissions (Zone:Cache Purge) and that the plugin settings are configured correctly.
+
+### Does this plugin work with multisite WordPress installations?
+Yes, the plugin supports multisite installations. Each site can configure its own Cloudflare settings.
+
+### Can I use this plugin without a Cloudflare account?
+No, a Cloudflare account is required to use this plugin.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Troubleshooting
+
+### Common Issues
+
+1. **API Authentication Errors**:
+   - Verify that the API Token is valid and has the required permissions.
+   - Check the plugin settings for any misconfigurations.
+
+2. **Cache Not Updating**:
+   - Ensure that the plugin is active and properly configured.
+   - Check the WordPress logs for any errors related to the plugin.
+
+3. **Plugin Conflicts**:
+   - Deactivate other caching plugins to avoid conflicts.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

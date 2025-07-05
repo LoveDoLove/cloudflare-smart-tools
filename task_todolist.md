@@ -32,12 +32,12 @@
 - [x] Cache API responses for longer durations where applicable.
 
 ## 8. Add Unit and Integration Tests
-- [ ] Write unit tests for core functions using PHPUnit.
-- [ ] Add integration tests to verify API interactions with Cloudflare.
+- [x] Write unit tests for core functions using PHPUnit.
+- [x] Add integration tests to verify API interactions with Cloudflare.
 
 ## 9. Documentation
-- [ ] Create a detailed README file with setup instructions, FAQs, and troubleshooting tips.
-- [ ] Add inline comments to the codebase for better maintainability.
+- [x] Create a detailed README file with setup instructions, FAQs, and troubleshooting tips.
+- [x] Add inline comments to the codebase for better maintainability.
 
 ## 10. Additional Features
 - [ ] Add support for Cloudflare Workers for advanced caching scenarios.

@@ -18,8 +18,10 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 
-// ===================== Auto-Deactivate Old Plugin =====================
-// Auto-deactivate old version of this plugin if present (Context7 best practice)
+// ===================== Inline Comments for Maintainability =====================
+
+// Auto-deactivate old version of this plugin if present
+// This ensures that only the latest version of the plugin is active
 add_action('activated_plugin', function($plugin) {
     if (plugin_basename(__FILE__) === $plugin) {
         $old_plugin = 'cf-smart-cache/cf-smart-cache.php';
@@ -29,7 +31,8 @@ add_action('activated_plugin', function($plugin) {
     }
 });
 
-// ===================== Edge Cache Headers & Event Hooks =====================
+// Initialize edge cache headers and event hooks
+// Adds headers for caching and sets up hooks for cache purging on various events
 function cf_smart_cache_init_action() {
     static $done = false;
     if ( $done ) {
@@ -37,26 +40,24 @@ function cf_smart_cache_init_action() {
     }
     $done = true;
 
-    // Add the edge-cache headers
+    // Add the edge-cache headers for public pages
     if ( !is_user_logged_in() ) {
         header( 'x-HTML-Edge-Cache: cache,bypass-cookies=wp-|wordpress|comment_|woocommerce_' );
     } else {
         header( 'x-HTML-Edge-Cache: nocache' );
     }
 
-    // Post events
+    // Hook into WordPress events to trigger cache purging
     add_action( 'wp_trash_post', 'cf_smart_cache_purge1', 0 );
     add_action( 'publish_post', 'cf_smart_cache_purge1', 0 );
     add_action( 'edit_post', 'cf_smart_cache_purge1', 0 );
     add_action( 'delete_post', 'cf_smart_cache_purge1', 0 );
     add_action( 'publish_phone', 'cf_smart_cache_purge1', 0 );
-    // Comment events
     add_action( 'trackback_post', 'cf_smart_cache_purge2', 99 );
     add_action( 'pingback_post', 'cf_smart_cache_purge2', 99 );
     add_action( 'comment_post', 'cf_smart_cache_purge2', 99 );
     add_action( 'edit_comment', 'cf_smart_cache_purge2', 99 );
     add_action( 'wp_set_comment_status', 'cf_smart_cache_purge2', 99, 2 );
-    // Other events
     add_action( 'switch_theme', 'cf_smart_cache_purge1', 99 );
     add_action( 'edit_user_profile_update', 'cf_smart_cache_purge1', 99 );
     add_action( 'wp_update_nav_menu', 'cf_smart_cache_purge0' );
