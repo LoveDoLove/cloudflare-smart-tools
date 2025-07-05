@@ -8,26 +8,24 @@
 [![Issues][issues-shield]][issues-url]
 [![License][license-shield]][license-url]
 
+
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
   <a href="https://github.com/LoveDoLove/cloudflare-smart-cache">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+    <img src="images/logo.png" alt="Logo" width="120" />
   </a>
-
-<h3 align="center">Cloudflare Smart Cache</h3>
-
+  <h3 align="center">Cloudflare Smart Cache</h3>
   <p align="center">
-    Powerful all-in-one Cloudflare cache solution: edge HTML caching, automatic purging on content changes, and advanced admin controls for WordPress and beyond.
-    <br />
+    A powerful, secure, and feature-rich Cloudflare cache management solution for WordPress and custom sites.<br />
     <a href="https://github.com/LoveDoLove/cloudflare-smart-cache"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache">View Demo</a>
-    &middot;
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
-    &middot;
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="#usage">View Demo</a>
+    ·
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues">Request Feature</a>
   </p>
 </div>
 
@@ -48,51 +46,63 @@
   </ol>
 </details>
 
+
 ## About The Project
 
-Cloudflare Smart Cache is a powerful, all-in-one caching solution designed for both WordPress and non-WordPress sites. It leverages Cloudflare's edge network to cache HTML pages, automatically purges cache on content changes, and provides advanced admin controls for seamless integration and management.
+Cloudflare Smart Cache is a modern, all-in-one caching solution for WordPress and custom (non-WordPress) sites. It leverages Cloudflare's edge network to cache HTML pages, automatically purges cache on content changes, and provides advanced admin controls for seamless integration and management. The project includes both a WordPress plugin and a Cloudflare Worker for maximum flexibility.
 
-- **WordPress Plugin:** Installs as a standard plugin, adds edge cache headers, and purges cache on post, comment, and theme changes.
-- **Cloudflare Worker:** For non-WordPress or custom sites, deploy the provided Worker script to enable smart HTML edge caching and bypass logic.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Features
 
-### Features
+- **Modern Cloudflare API Authentication**: Supports API Token (recommended) and legacy Global API Key + Email.
+- **Automatic Cache Purging**: On post/page changes, comments, menus, taxonomies, and more.
+- **Smart Edge Cache Headers**: Context-aware cache control for homepage, posts, archives, and REST API.
+- **Advanced Bypass Logic**: Bypass for logged-in users, admin, and customizable cookie patterns.
+- **Batch Processing & Rate Limiting**: Efficient bulk purging (30 URLs per batch), with Cloudflare API rate limit management.
+- **Admin Toolbar Integration**: Quick cache actions from any page in WordPress.
+- **Comprehensive Logging**: Multi-level debug logging, error handling, and API usage monitoring.
+- **Developer Hooks**: Filters and actions for extensibility and custom workflows.
+- **Security Best Practices**: Input sanitization, CSRF protection, secure credential storage, and security headers.
+- **Performance Optimizations**: Transient caching, background processing, and minimal resource usage.
+- **Compatibility**: WordPress 5.0+, PHP 7.4+, multisite, custom post types, major e-commerce plugins.
 
-- Edge HTML caching for public pages (WordPress & non-WordPress)
-- Automatic cache purging on post, category, comment, and theme changes
-- Smart bypass for logged-in users, admin areas, and session cookies
-- Admin settings page for Cloudflare API credentials and zone selection
-- Works with Cloudflare KV or direct API calls
-- Secure, modular, and easy to configure
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting Started
 
 ### Prerequisites
 
-- A Cloudflare account with API access
-- (For WordPress) WordPress 5.0 or later
-- (Optional) Access to Cloudflare Workers for non-WordPress deployment
+- Cloudflare account with API access
+- For WordPress: WordPress 5.0 or later
+- For Worker: Access to Cloudflare Workers
+- PHP 7.4+ (for WordPress plugin)
 
-### Installation
+## Installation
 
-#### WordPress Plugin
-1. Download or clone this repository:
-   ```sh
-   git clone https://github.com/LoveDoLove/cloudflare-smart-cache.git
-   ```
-2. Copy `cf-smart-cache.php` to your WordPress `wp-content/plugins/` directory.
-3. Activate **Cloudflare Smart Cache** from the WordPress admin Plugins page.
-4. Go to **Settings > CF Smart Cache** and enter your Cloudflare API credentials and select your zone.
+### WordPress Plugin
+1. Upload the contents of `plugins/` to your WordPress `wp-content/plugins/cf-smart-cache/` directory.
+2. Activate **Cloudflare Smart Cache** from the WordPress admin Plugins page.
+3. Go to **Settings > CF Smart Cache** and enter your Cloudflare API credentials and select your zone.
 
-#### Cloudflare Worker (Non-WordPress)
-1. Copy `cf-smart-cache.js` to your Cloudflare Worker environment.
-2. Configure the `CLOUDFLARE_API` object with your email, API key, and zone ID.
+### Cloudflare Worker (Non-WordPress)
+1. Copy `workers/cf-smart-cache-html.js` to your Cloudflare Worker environment.
+2. Configure the Worker with your Cloudflare API credentials and zone ID as described in the script comments.
 3. Deploy the Worker via the Cloudflare dashboard.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Configuration
+
+### Recommended: API Token (WordPress)
+1. In your [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens), create a new API Token with:
+   - `Zone:Read` and `Cache Purge:Edit` permissions
+   - Restrict to your site's zone
+2. Enter the token in the plugin settings.
+
+### Legacy: Global API Key
+1. Get your Global API Key from [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens)
+2. Enter your Cloudflare email and API Key in the plugin settings.
+
+### Zone Selection
+After configuring authentication, select your domain's zone from the dropdown in the plugin settings.
+
 
 ## Usage
 
@@ -100,18 +110,47 @@ Cloudflare Smart Cache is a powerful, all-in-one caching solution designed for b
 - The plugin automatically adds edge cache headers to public pages and purges cache on content changes (posts, comments, categories, menus, etc.).
 - Logged-in users and admin areas are always bypassed for safety.
 - Use the admin settings page to manage API credentials and zone selection.
+- Use the admin toolbar for quick cache actions (purge current page, purge all cache).
 
-### Non-WordPress (Cloudflare Worker)
+### Cloudflare Worker
 - The Worker script caches public HTML pages at the edge, bypasses cache for requests with session/auth cookies, and supports manual/automatic purging.
-- Customize bypass logic and cache rules in `cf-smart-cache.js` as needed.
+- Customize bypass logic and cache rules in `cf-smart-cache-html.js` as needed.
+## Developer Hooks
 
-_For more details, see inline documentation in the source files._
+### Filters
+```php
+// Modify supported post types
+add_filter('cf_smart_cache_supported_post_types', function($types) {
+    $types[] = 'my_custom_post_type';
+    return $types;
+});
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+// Customize bypass cookies
+add_filter('cf_smart_cache_bypass_cookies', function($cookies) {
+    $cookies[] = 'my_custom_cookie';
+    return $cookies;
+});
+
+// Modify URLs to purge for a post
+add_filter('cf_smart_cache_post_purge_urls', function($urls, $post_id, $post) {
+    // Add custom URLs
+    return $urls;
+}, 10, 3);
+```
+
+### Actions
+```php
+// Before cache purge
+do_action('cf_smart_cache_before_purge', $urls);
+
+// After cache purge
+do_action('cf_smart_cache_after_purge', $urls, $response);
+```
+
 
 ## Roadmap
 
-- [ ] Add support for custom cache rules via admin UI
+- [ ] Custom cache rules via admin UI
 - [ ] Enhanced logging and analytics
 - [ ] Multi-site and multi-zone support
 - [ ] CLI tools for cache management
