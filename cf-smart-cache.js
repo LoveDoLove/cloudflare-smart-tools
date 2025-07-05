@@ -60,11 +60,11 @@ addEventListener("fetch", (event) => {
     url.pathname.startsWith("/wp-content") ||
     url.pathname.startsWith("/wp-includes") ||
     (request.headers.get("cookie") &&
-      /wordpress|wp-|woocommerce_|PHPSESSID|comment_/.test(request.headers.get("cookie")));
+      /wordpress|wp-|woocommerce_|PHPSESSID|comment_|wordpress_sec_/i.test(request.headers.get("cookie")));
 
   // Detect if the request has any cookies that indicate a login/session/auth (common patterns)
   const cookieHeader = request.headers.get("cookie") || "";
-  const hasAuthCookie = /auth|session|token|login|user|admin|PHPSESSID|wordpress|wp-|woocommerce_|comment_/i.test(cookieHeader);
+  const hasAuthCookie = /auth|session|token|login|user|admin|PHPSESSID|wordpress|wp-|woocommerce_|comment_|wordpress_sec_/i.test(cookieHeader);
 
   if (configured && !isImage && upstreamCache === null) {
     if (!isLikelyWordPress) {
