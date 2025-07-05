@@ -504,3 +504,33 @@ function cf_smart_cache_render_block($attributes) {
     <?php
     return ob_get_clean();
 }
+
+// ===================== Additional Features =====================
+
+// Add support for Cloudflare Workers
+function cf_smart_cache_deploy_worker($script) {
+    $url = 'https://api.cloudflare.com/client/v4/accounts/{account_id}/workers/scripts/{script_name}';
+    $response = wp_remote_post($url, [
+        'headers' => [
+            'Authorization' => 'Bearer ' . get_option('cf_smart_cache_settings')['cf_smart_cache_api_token'],
+            'Content-Type' => 'application/javascript'
+        ],
+        'body' => $script
+    ]);
+    return $response;
+}
+
+// Add cache header options in admin settings
+function cf_smart_cache_cache_header_render() {
+    $options = get_option('cf_smart_cache_settings');
+    $checked = isset($options['cf_smart_cache_enable_headers']) && $options['cf_smart_cache_enable_headers'] ? 'checked' : '';
+    echo "<input type='checkbox' name='cf_smart_cache_settings[cf_smart_cache_enable_headers]' value='1' $checked> Enable Cache Headers";
+}
+add_settings_field('cf_smart_cache_enable_headers', 'Enable Cache Headers', 'cf_smart_cache_cache_header_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
+
+// Add Debug Mode
+function cf_smart_cache_debug_log($message) {
+    if (defined('CF_SMART_CACHE_DEBUG') && CF_SMART_CACHE_DEBUG) {
+        error_log('[CF Smart Cache Debug] ' . $message);
+    }
+}

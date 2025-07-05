@@ -40,6 +40,6 @@
 - [x] Add inline comments to the codebase for better maintainability.
 
 ## 10. Additional Features
-- [ ] Add support for Cloudflare Workers for advanced caching scenarios.
-- [ ] Provide an option to enable/disable specific cache headers.
-- [ ] Add a "Debug Mode" to log all API requests and responses for troubleshooting.
+- [x] Add support for Cloudflare Workers for advanced caching scenarios.
+- [x] Provide an option to enable/disable specific cache headers.
+- [x] Add a "Debug Mode" to log all API requests and responses for troubleshooting.
