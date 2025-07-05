@@ -50,7 +50,43 @@ addEventListener("fetch", (event) => {
     isImage = true;
   }
 
+  // --- BEGIN: Smart cache logic for non-WordPress sites ---
+  // If the request is for a non-WordPress site, only cache if the page does not require login (i.e., no auth/session cookies present)
+  // This prevents caching of personalized or login-required pages, but allows caching of public pages.
+  const url = new URL(request.url);
+  const isLikelyWordPress =
+    url.pathname.startsWith("/wp-") ||
+    url.pathname.startsWith("/wp-admin") ||
+    url.pathname.startsWith("/wp-content") ||
+    url.pathname.startsWith("/wp-includes") ||
+    (request.headers.get("cookie") &&
+      /wordpress|wp-|woocommerce_|PHPSESSID|comment_/.test(request.headers.get("cookie")));
+
+  // Detect if the request has any cookies that indicate a login/session/auth (common patterns)
+  const cookieHeader = request.headers.get("cookie") || "";
+  const hasAuthCookie = /auth|session|token|login|user|admin|PHPSESSID|wordpress|wp-|woocommerce_|comment_/i.test(cookieHeader);
+
   if (configured && !isImage && upstreamCache === null) {
+    if (!isLikelyWordPress) {
+      if (hasAuthCookie) {
+        // Non-WordPress site, but request has login/auth/session cookies, so bypass cache
+        event.respondWith(
+          (async () => {
+            const originResponse = await fetch(request);
+            const resp = new Response(originResponse.body, originResponse);
+            resp.headers.set("x-HTML-Edge-Cache-Status", "Bypass-NonWordPress-Auth");
+            return resp;
+          })()
+        );
+        return;
+      } else {
+        // Non-WordPress site, no login/auth/session cookies, so allow caching (public page)
+        event.passThroughOnException();
+        event.respondWith(processRequest(request, event));
+        return;
+      }
+    }
+    // WordPress site, use normal logic
     event.passThroughOnException();
     event.respondWith(processRequest(request, event));
   }
