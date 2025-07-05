@@ -14,7 +14,6 @@
  * Domain Path:       /languages
  * Replace:           cf-smart-cache/cf-smart-cache.php
  *
- * The 'Replace' header and auto-deactivation logic below follow Context7-sourced WordPress plugin upgrade best practices (2025).
  */
 
 
