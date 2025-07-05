@@ -122,7 +122,18 @@ function cf_smart_cache_log_error($message) {
     }
 }
 
-// Update API call to include retry logic and user-friendly error messages
+// Use non-blocking asynchronous requests for API calls
+function cf_smart_cache_async_request($url, $headers, $body = null) {
+    $args = [
+        'method' => $body ? 'POST' : 'GET',
+        'headers' => $headers,
+        'body' => $body ? json_encode($body) : null,
+        'timeout' => 0.01, // Non-blocking
+    ];
+    wp_remote_request($url, $args);
+}
+
+// Cache API responses for longer durations
 function cf_smart_cache_fetch_zones() {
     $cached_zones = get_transient('cf_smart_cache_zone_list');
     if (false !== $cached_zones) {
@@ -130,43 +141,34 @@ function cf_smart_cache_fetch_zones() {
     }
 
     $settings = get_option('cf_smart_cache_settings');
-    $email = $settings['cf_smart_cache_email'] ?? '';
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
-
-    if (empty($email) || empty($api_token)) {
-        cf_smart_cache_log_error('API credentials not set.');
-        return new WP_Error('missing_creds', 'API credentials not set.');
+    if (empty($api_token)) {
+        return new WP_Error('missing_creds', __('API credentials not set.', 'cf-smart-cache'));
     }
 
-    $attempts = 3;
-    while ($attempts > 0) {
-        $response = wp_remote_get('https://api.cloudflare.com/client/v4/zones', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_token,
-                'Content-Type' => 'application/json'
-            ],
-            'timeout' => 15,
-        ]);
+    $url = 'https://api.cloudflare.com/client/v4/zones';
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_token,
+        'Content-Type' => 'application/json',
+    ];
 
-        if (!is_wp_error($response)) {
-            $body = json_decode(wp_remote_retrieve_body($response), true);
-            if (isset($body['success']) && $body['success']) {
-                set_transient('cf_smart_cache_zone_list', $body['result'], HOUR_IN_SECONDS);
-                return $body['result'];
-            } else {
-                $error_message = $body['errors'][0]['message'] ?? 'Unknown API error.';
-                cf_smart_cache_log_error('API Error: ' . $error_message);
-                return new WP_Error('api_error', $error_message);
-            }
-        } else {
-            cf_smart_cache_log_error('Transient API Error: ' . $response->get_error_message());
-        }
+    $response = wp_remote_get($url, [
+        'headers' => $headers,
+        'timeout' => 15,
+    ]);
 
-        $attempts--;
-        sleep(1); // Wait before retrying
+    if (is_wp_error($response)) {
+        return $response;
     }
 
-    return new WP_Error('api_error', 'Failed to fetch zones after multiple attempts.');
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    if (isset($body['success']) && $body['success']) {
+        set_transient('cf_smart_cache_zone_list', $body['result'], DAY_IN_SECONDS); // Cache for 1 day
+        return $body['result'];
+    } else {
+        $error_message = $body['errors'][0]['message'] ?? __('Unknown API error.', 'cf-smart-cache');
+        return new WP_Error('api_error', $error_message);
+    }
 }
 
 function cf_smart_cache_email_render() {
