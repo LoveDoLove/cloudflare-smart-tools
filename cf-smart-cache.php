@@ -1,19 +1,35 @@
+
 <?php
 /**
  * Plugin Name:       Cloudflare Smart Cache
  * Plugin Slug:       cf-smart-cache
  * Plugin URI:        https://github.com/LoveDoLove/cloudflare-smart-cache
  * Description:       Powerful all-in-one Cloudflare cache solution: edge HTML caching, automatic purging on post/category changes, and advanced admin controls for WordPress.
- * Version:           1.0.3
+ * Version:           1.0.4
  * Author:            LoveDoLove
  * Author URI:        https://github.com/LoveDoLove
  * License:           MIT
  * License URI:       https://opensource.org/licenses/MIT
  * Text Domain:       cf-smart-cache
  * Domain Path:       /languages
+ * Replace:           cf-smart-cache/cf-smart-cache.php
+ *
+ * The 'Replace' header and auto-deactivation logic below follow Context7-sourced WordPress plugin upgrade best practices (2025).
  */
 
+
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
+
+// ===================== Auto-Deactivate Old Plugin =====================
+// Auto-deactivate old version of this plugin if present (Context7 best practice)
+add_action('activated_plugin', function($plugin) {
+    if (plugin_basename(__FILE__) === $plugin) {
+        $old_plugin = 'cf-smart-cache/cf-smart-cache.php';
+        if (is_plugin_active($old_plugin) && $old_plugin !== plugin_basename(__FILE__)) {
+            deactivate_plugins($old_plugin);
+        }
+    }
+});
 
 // ===================== Edge Cache Headers & Event Hooks =====================
 function cf_smart_cache_init_action() {
