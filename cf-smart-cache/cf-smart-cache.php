@@ -397,16 +397,28 @@ function cf_smart_cache_fetch_zones()
         return new WP_Error('missing_creds', 'API credentials not set. Please provide either an API token or email + API key.');
     }
     
-    $response = wp_remote_get('https://api.cloudflare.com/client/v4/zones', [
-        'headers' => $headers,
-        'timeout' => 15,
-    ]);
-    
+    $retry_attempts = 3;
+    $response = null;
+
+    for ($i = 0; $i < $retry_attempts; $i++) {
+        $response = wp_remote_get('https://api.cloudflare.com/client/v4/zones', [
+            'headers' => $headers,
+            'timeout' => 15,
+        ]);
+
+        if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) < 500) {
+            break;
+        }
+
+        cf_smart_cache_log(sprintf('Retrying zone fetch due to transient error (Attempt %d/%d)', $i + 1, $retry_attempts), 'warning');
+        sleep(2); // Wait before retrying
+    }
+
     $validated_response = cf_smart_cache_validate_api_response($response, 'zone fetching');
     if (is_wp_error($validated_response)) {
         return $validated_response;
     }
-    
+
     cf_smart_cache_log(sprintf('Successfully fetched %d zones from Cloudflare API', count($validated_response['result'])));
     set_transient('cf_smart_cache_zone_list', $validated_response['result'], HOUR_IN_SECONDS);
     return $validated_response['result'];
