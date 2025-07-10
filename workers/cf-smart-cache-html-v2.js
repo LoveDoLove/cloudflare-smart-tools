@@ -78,9 +78,97 @@ async function forwardAndProcessResponse(request, event) {
  * @returns {Promise<Response>}
  */
 async function processForwardedResponse(originalRequest, response, event) {
-  // Placeholder for future modularization: cache, purge, bypass, etc.
-  // For now, just return the response as-is.
-  return response;
+  // --- Improved Smart Caching Logic ---
+  // Only cache safe, non-dynamic HTML responses. Avoid caching if:
+  // - The request has cookies that indicate a logged-in or dynamic session
+  // - The response has Set-Cookie headers (dynamic content)
+  // - The response is not a 200 OK or not HTML
+  // - The request URL matches a bypass pattern
+  // - The response has headers that indicate it should not be cached
+
+  const accept = originalRequest.headers.get("Accept");
+  const isHTML = accept && accept.indexOf("text/html") >= 0;
+  const method = originalRequest.method;
+  let status = "Miss";
+  let cacheVer = null;
+  let bypassCache = false;
+
+  // 1. Bypass if URL matches bypass patterns
+  const url = new URL(originalRequest.url);
+  const path = url.pathname + url.search;
+  for (let pattern of BYPASS_URL_PATTERNS) {
+    if (pattern.test(path)) {
+      bypassCache = true;
+      status = "Bypass URL Pattern";
+      break;
+    }
+  }
+
+  // 2. Bypass if request has cookies that match bypass cookies
+  if (!bypassCache) {
+    const cookieHeader = originalRequest.headers.get("cookie");
+    if (cookieHeader && cookieHeader.length) {
+      const cookies = cookieHeader.split(";");
+      for (let cookie of cookies) {
+        for (let prefix of DEFAULT_BYPASS_COOKIES) {
+          if (cookie.trim().startsWith(prefix) || cookie.trim().includes(prefix)) {
+            bypassCache = true;
+            status = "Bypass Cookie: " + prefix;
+            break;
+          }
+        }
+        if (bypassCache) break;
+      }
+    }
+  }
+
+  // 3. Bypass if response has Set-Cookie header (dynamic content)
+  if (!bypassCache && response.headers.has("Set-Cookie")) {
+    bypassCache = true;
+    status = "Bypass Set-Cookie";
+  }
+
+  // 4. Bypass if response is not 200 or not HTML
+  if (!bypassCache && (!isHTML || response.status !== 200)) {
+    bypassCache = true;
+    status = `Bypass Status/Type: ${response.status}`;
+  }
+
+  // 5. Bypass if response has Cache-Control: private or no-store
+  if (!bypassCache) {
+    const cacheControl = response.headers.get("Cache-Control");
+    if (cacheControl && (/private|no-store|no-cache/i).test(cacheControl)) {
+      bypassCache = true;
+      status = "Bypass Cache-Control: " + cacheControl;
+    }
+  }
+
+  // 6. If not bypassed, cache the response (public, safe, static HTML)
+  if (!bypassCache && method === "GET") {
+    // Remove Set-Cookie header for cache safety
+    let safeResponse = new Response(response.body, response);
+    safeResponse.headers.delete("Set-Cookie");
+    safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
+    // Optionally, add a custom header for cache status
+    safeResponse.headers.set("x-HTML-Edge-Cache-Status", "Hit");
+    // Store in cache (if using KV, implement versioning as in v1)
+    // For now, use the default cache
+    try {
+      cacheVer = 0; // For future: implement versioning
+      const cacheKeyRequest = new Request(originalRequest.url + `?cf_edge_cache_ver=${cacheVer}`);
+      event.waitUntil(caches.default.put(cacheKeyRequest, safeResponse.clone()));
+      return safeResponse;
+    } catch (err) {
+      // If cache fails, just return the response
+      safeResponse.headers.set("x-HTML-Edge-Cache-Status", "Cache Write Exception");
+      return safeResponse;
+    }
+  }
+
+  // If bypassed, add a header to indicate why
+  let bypassedResponse = new Response(response.body, response);
+  bypassedResponse.headers.set("x-HTML-Edge-Cache-Status", status);
+  return bypassedResponse;
 }
 
 // Additional modular functions (cache, purge, bypass, etc.) will be implemented in subsequent steps.
