@@ -20,8 +20,12 @@ const LOGIN_COOKIE_PREFIXES = [
   // Add your own hosting's login/session cookie names or prefixes here
 ];
 
+
 // cf-smart-cache-html-v2.js
-// KV-based HTML edge caching for Cloudflare Workers with Stale-While-Revalidate
+// KV-based HTML edge caching for Cloudflare Workers with Stale-While-Revalidate and URL Pattern Bypass
+
+// URL patterns to bypass cache (regex)
+const BYPASS_URL_PATTERNS = [/\/wp-admin\//, /\/api\//, /\/wp-login\.php/, /\/admin(\/|$)/];
 
 
 // Stale-While-Revalidate window (in seconds)
@@ -48,9 +52,21 @@ addEventListener("fetch", (event) => {
 
 async function handleRequest(event) {
   const request = event.request;
+
   // Only cache GET HTML requests
   const accept = request.headers.get("Accept");
   const isHTML = accept && accept.indexOf("text/html") >= 0;
+  const url = new URL(request.url);
+  // URL pattern bypass
+  for (let pattern of BYPASS_URL_PATTERNS) {
+    if (pattern.test(url.pathname)) {
+      let resp = await fetch(request);
+      let r = new Response(resp.body, resp);
+      r.headers.set("x-HTML-Edge-Cache-Status", "Bypass URL Pattern");
+      r.headers.set("x-Edge-Bypass-Pattern", pattern.toString());
+      return r;
+    }
+  }
   if (request.method !== "GET" || !isHTML) {
     return fetch(request);
   }
