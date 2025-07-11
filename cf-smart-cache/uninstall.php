@@ -60,3 +60,4 @@ function cf_smart_cache_uninstall_cleanup()
 
 // Perform cleanup
 cf_smart_cache_uninstall_cleanup();
+?>

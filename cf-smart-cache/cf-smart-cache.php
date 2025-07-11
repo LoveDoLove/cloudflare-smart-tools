@@ -1585,3 +1585,34 @@ add_action('admin_menu', function ()
         'cf_smart_cache_export_bypass_cookies_page'
     );
 });
+// ===================== Admin Notice for Missing Config =====================
+add_action('admin_notices', function ()
+{
+    $settings  = get_option('cf_smart_cache_settings');
+    $api_token = $settings['cf_smart_cache_api_token'] ?? '';
+    $email     = $settings['cf_smart_cache_email'] ?? '';
+    $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
+    $zone_id   = $settings['cf_smart_cache_zone_id'] ?? '';
+    if (empty($api_token) && (empty($email) || empty($api_key))) {
+        echo '<div class="notice notice-error"><p><strong>Cloudflare Smart Cache:</strong> ' . esc_html__('Cloudflare API credentials are missing. Please set an API token or email/key in the plugin settings.', 'cf-smart-cache') . '</p></div>';
+    }
+    if (empty($zone_id)) {
+        echo '<div class="notice notice-error"><p><strong>Cloudflare Smart Cache:</strong> ' . esc_html__('Cloudflare Zone ID is missing. Please select a zone in the plugin settings.', 'cf-smart-cache') . '</p></div>';
+    }
+});
+/**
+ * == Cloudflare Worker Integration ==
+ *
+ * To use this plugin with the Cloudflare Worker (cf-smart-cache-html.js):
+ * 1. Deploy the Worker and set the following environment variables (in wrangler.toml or Cloudflare dashboard):
+ *    - CLOUDFLARE_EMAIL (if using legacy API key)
+ *    - CLOUDFLARE_API_KEY (if using legacy API key)
+ *    - CLOUDFLARE_ZONE_ID (required)
+ *    - Or CLOUDFLARE_API_TOKEN (recommended)
+ * 2. In the plugin settings, enter the same API token (recommended) or email/key and zone ID.
+ * 3. The plugin will automatically use the most secure method available.
+ * 4. For best security, use an API token with only the permissions needed for cache purging.
+ *
+ * See the Worker and wrangler.toml for more details.
+ */
+?>
