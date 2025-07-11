@@ -84,7 +84,7 @@ async function handleRequest(event) {
   // URL pattern bypass
   for (let pattern of BYPASS_URL_PATTERNS) {
     if (pattern.test(url.pathname)) {
-      let resp = await fetch(request, { cache: "no-store" });
+      let resp = await fetch(request);
       let r = new Response(resp.body, resp);
       r.headers.set("x-HTML-Edge-Cache-Status", "Bypass URL Pattern");
       r.headers.set("x-Edge-Bypass-Pattern", pattern.toString());
@@ -93,11 +93,11 @@ async function handleRequest(event) {
   }
   // Only cache GET HTML requests
   if (request.method !== "GET" || !isHTML) {
-    return fetch(request, { cache: "no-store" });
+    return fetch(request);
   }
   // If the request has login/session/auth cookies, NEVER cache or serve from cache
   if (hasLoginCookie(request)) {
-    let resp = await fetch(request, { cache: "no-store" });
+    let resp = await fetch(request);
     let r = new Response(resp.body, resp);
     const debug = globalThis.__loginCookieDebug || {};
     r.headers.set("x-HTML-Edge-Cache-Status", "Bypass Login Cookie");
@@ -178,7 +178,6 @@ async function handleRequest(event) {
       body: request.body,
       redirect: request.redirect,
       credentials: request.credentials,
-      cache: request.cache,
       referrer: request.referrer,
       referrerPolicy: request.referrerPolicy,
       integrity: request.integrity,
@@ -229,7 +228,6 @@ async function handleRequest(event) {
         body: request.body,
         redirect: request.redirect,
         credentials: request.credentials,
-        cache: request.cache,
         referrer: request.referrer,
         referrerPolicy: request.referrerPolicy,
         integrity: request.integrity,
@@ -275,7 +273,6 @@ async function handleRequest(event) {
     body: request.body,
     redirect: request.redirect,
     credentials: request.credentials,
-    cache: request.cache,
     referrer: request.referrer,
     referrerPolicy: request.referrerPolicy,
     integrity: request.integrity,
