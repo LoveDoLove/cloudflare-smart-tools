@@ -204,6 +204,16 @@ function cf_smart_cache_init_action()
 }
 
 /**
+ * IMPORTANT: The Cloudflare Worker (cf-smart-cache-html-v2.js) will NEVER cache responses that have:
+ *   - Set-Cookie header
+ *   - Cache-Control: private, no-store, or no-cache
+ *   - Any login/session/auth cookies in the request
+ *
+ * Therefore, this plugin MUST always set these headers for private, admin, or user-specific pages.
+ * This ensures maximum security and prevents any private content from being cached at the edge.
+ */
+
+/**
  * Set appropriate edge cache headers based on page type and user status
  * Following Cloudflare best practices for edge caching and security
  */
@@ -228,7 +238,10 @@ function cf_smart_cache_set_edge_headers()
         return;
     }
     
-    // Enhanced bypass cookies for better compatibility
+    /**
+     * The bypass cookie list below MUST match the LOGIN_COOKIE_PREFIXES in cf-smart-cache-html-v2.js.
+     * If you update one, update the other to keep origin and edge logic in sync for security.
+     */
     $bypass_cookies = apply_filters('cf_smart_cache_bypass_cookies', [
         'wordpress_logged_in',
         'wp-',
@@ -248,12 +261,15 @@ function cf_smart_cache_set_edge_headers()
         'wc_',
         'jevents_'
     ]);
-    
+
     $bypass_string = implode('|', $bypass_cookies);
-    
+
     // Add security headers for cached pages
     cf_smart_cache_add_security_headers();
-    
+
+    // Add plugin debug header for transparency
+    header('x-HTML-Edge-Cache-Plugin: active');
+
     // Set appropriate cache headers based on page type
     if (is_front_page() || is_home()) {
         header("x-HTML-Edge-Cache: cache,bypass-cookies={$bypass_string}");
@@ -265,7 +281,7 @@ function cf_smart_cache_set_edge_headers()
         header("x-HTML-Edge-Cache: cache,bypass-cookies={$bypass_string}");
         header('Cache-Control: public, max-age=1800, s-maxage=3600');
     }
-    
+
     cf_smart_cache_log('Edge caching enabled with cookie bypass and security headers');
 }
 
