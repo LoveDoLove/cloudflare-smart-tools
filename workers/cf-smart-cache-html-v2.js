@@ -122,19 +122,26 @@ async function processForwardedResponse(originalRequest, response, event) {
     }
   }
 
-  // 3. Bypass if response has Set-Cookie header (dynamic content)
+  // 3. Auto-purge if response has x-HTML-Edge-Cache: purgeall header
+  const edgeCacheHeader = response.headers.get("x-HTML-Edge-Cache");
+  if (edgeCacheHeader && edgeCacheHeader.includes("purgeall")) {
+    await purgeCache(event);
+    status = (status === "Miss" ? "" : status + ", ") + "Purged";
+  }
+
+  // 4. Bypass if response has Set-Cookie header (dynamic content)
   if (!bypassCache && response.headers.has("Set-Cookie")) {
     bypassCache = true;
     status = "Bypass Set-Cookie";
   }
 
-  // 4. Bypass if response is not 200 or not HTML
+  // 5. Bypass if response is not 200 or not HTML
   if (!bypassCache && (!isHTML || response.status !== 200)) {
     bypassCache = true;
     status = `Bypass Status/Type: ${response.status}`;
   }
 
-  // 5. Bypass if response has Cache-Control: private or no-store
+  // 6. Bypass if response has Cache-Control: private or no-store
   if (!bypassCache) {
     const cacheControl = response.headers.get("Cache-Control");
     if (cacheControl && (/private|no-store|no-cache/i).test(cacheControl)) {
