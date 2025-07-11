@@ -230,12 +230,18 @@ function cf_smart_cache_set_edge_headers()
     
     // Enhanced bypass cookies for better compatibility
     $bypass_cookies = apply_filters('cf_smart_cache_bypass_cookies', [
+        'wordpress_logged_in',
         'wp-',
+        'wordpress_sec',
+        'woocommerce_',
+        'PHPSESSID',
+        'session',
+        'auth',
+        'token',
+        'user',
         'wordpress',
         'comment_',
-        'woocommerce_',
         'wp_postpass',
-        'wordpress_logged_in',
         'edd_',
         'memberpress_',
         'wpsc_',

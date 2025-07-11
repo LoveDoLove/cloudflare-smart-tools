@@ -9,6 +9,14 @@ const LOGIN_COOKIE_PREFIXES = [
   "auth",
   "token",
   "user",
+  "wordpress",
+  "comment_",
+  "wp_postpass",
+  "edd_",
+  "memberpress_",
+  "wpsc_",
+  "wc_",
+  "jevents_",
   // Add your own hosting's login/session cookie names or prefixes here
 ];
 // cf-smart-cache-html-v2.js
