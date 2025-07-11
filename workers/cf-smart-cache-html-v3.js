@@ -91,12 +91,15 @@ const WORDPRESS_SPECIFIC_COOKIES = [
   "wp-",
 ];
 
-// cf-smart-cache-html-v2.js (v2.2 - Smart Site Detection)
+// cf-smart-cache-html-v3.js (v3.0 - User Authentication Cache Fix)
 // Enhanced KV-based HTML edge caching for Cloudflare Workers
 // Features:
-// - Smart detection for WordPress vs non-WordPress sites (NEW in v2.2)
-// - Framework-aware cookie analysis to prevent 419 Page Expired errors (NEW in v2.2)
-// - Intelligent distinction between auth cookies and session/CSRF tokens (NEW in v2.2)
+// - FIXED: Cache poisoning where logged-in users see anonymous content (NEW in v3.0)
+// - User-aware cache keys to prevent authentication state mixing (NEW in v3.0)
+// - Proper Vary header handling for user-specific content (NEW in v3.0)
+// - Smart detection for WordPress vs non-WordPress sites
+// - Framework-aware cookie analysis to prevent 419 Page Expired errors
+// - Intelligent distinction between auth cookies and session/CSRF tokens
 // - Comprehensive security measures to prevent caching private content
 // - Stale-While-Revalidate support for optimal performance
 // - URL Pattern Bypass for admin/API endpoints
@@ -250,8 +253,10 @@ async function handleRequest(event) {
     let resp = await fetchWithRetry(request);
     let r = new Response(resp.body, resp);
     const debug = globalThis.__loginCookieDebug || {};
+    const authState = getUserAuthenticationState(request);
     r.headers.set("x-HTML-Edge-Cache-Status", CACHE_STATUS.BYPASS_COOKIE);
     r.headers.set("x-Edge-Debug-Site-Type", debug.siteType || "unknown");
+    r.headers.set("x-Edge-Debug-Auth-State", authState);
     r.headers.set("x-Edge-Debug-All-Cookies", (debug.all || []).join(", "));
     r.headers.set("x-Edge-Debug-Auth-Cookies", (debug.auth || []).join(", "));
     r.headers.set(
@@ -259,11 +264,12 @@ async function handleRequest(event) {
       (debug.session || []).join(", ")
     );
     r.headers.set("x-Edge-Debug-Decision", debug.decision || "UNKNOWN");
+    r.headers.set("x-Edge-Cache-Fix", "v3.0-user-auth-aware");
     r.headers.set(
       "x-HTML-Edge-Cache-Debug",
       `bypass=auth-cookie;site=${debug.siteType};auth=${(debug.auth || []).join(
         ","
-      )}`
+      )};authstate=${authState}`
     );
     return r;
   }
@@ -292,27 +298,36 @@ async function handleRequest(event) {
     if (age <= 0 || age < MAX_CACHE_TTL) {
       // If not stale (within max-age), serve as fresh
       cachedResponse = new Response(cachedResponse.body, cachedResponse);
+      const authState = getUserAuthenticationState(request);
       cachedResponse.headers.set("x-HTML-Edge-Cache-Status", CACHE_STATUS.HIT);
       cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
+      cachedResponse.headers.set("x-Edge-Debug-Auth-State", authState);
+      cachedResponse.headers.set("x-Edge-Cache-Fix", "v3.0-user-auth-aware");
       cachedResponse.headers.set(
         "x-Edge-Cache-SWR-Mode",
         SERVE_STALE_WHILE_REVALIDATE ? "SWR" : "No-SWR"
       );
-      cachedResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=hit");
+      cachedResponse.headers.set(
+        "x-HTML-Edge-Cache-Debug",
+        "cache=hit;authstate=" + authState
+      );
       return cachedResponse;
     } else if (age <= SWR_WINDOW + MAX_CACHE_TTL) {
       if (SERVE_STALE_WHILE_REVALIDATE) {
         // Serve stale and revalidate in background
         cachedResponse = new Response(cachedResponse.body, cachedResponse);
+        const authStateStale = getUserAuthenticationState(request);
         cachedResponse.headers.set(
           "x-HTML-Edge-Cache-Status",
           CACHE_STATUS.STALE_WHILE_REVALIDATE
         );
         cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
+        cachedResponse.headers.set("x-Edge-Debug-Auth-State", authStateStale);
+        cachedResponse.headers.set("x-Edge-Cache-Fix", "v3.0-user-auth-aware");
         cachedResponse.headers.set("x-Edge-Cache-SWR-Mode", "SWR");
         cachedResponse.headers.set(
           "x-HTML-Edge-Cache-Debug",
-          "cache=stale-while-revalidate"
+          "cache=stale-while-revalidate;authstate=" + authStateStale
         );
         event.waitUntil(
           revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event)
@@ -326,15 +341,18 @@ async function handleRequest(event) {
           swrMetaKey,
           event
         );
+        const authStateFresh = getUserAuthenticationState(request);
         freshResponse.headers.set(
           "x-HTML-Edge-Cache-Status",
           CACHE_STATUS.REVALIDATED
         );
         freshResponse.headers.set("x-Edge-Cache-Age", "0");
+        freshResponse.headers.set("x-Edge-Debug-Auth-State", authStateFresh);
+        freshResponse.headers.set("x-Edge-Cache-Fix", "v3.0-user-auth-aware");
         freshResponse.headers.set("x-Edge-Cache-SWR-Mode", "No-SWR");
         freshResponse.headers.set(
           "x-HTML-Edge-Cache-Debug",
-          "cache=revalidated"
+          "cache=revalidated;authstate=" + authStateFresh
         );
         return freshResponse;
       }
@@ -435,8 +453,14 @@ async function handleRequest(event) {
 
   // Cache the response (public, safe, static HTML)
   let safeResponse = createSafeResponse(response);
+  const authState = getUserAuthenticationState(request);
   safeResponse.headers.set("x-HTML-Edge-Cache-Status", CACHE_STATUS.CACHED);
-  safeResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=cached");
+  safeResponse.headers.set("x-Edge-Debug-Auth-State", authState);
+  safeResponse.headers.set("x-Edge-Cache-Fix", "v3.0-user-auth-aware");
+  safeResponse.headers.set(
+    "x-HTML-Edge-Cache-Debug",
+    "cache=cached;authstate=" + authState
+  );
   if (typeof SMART_CACHE !== "undefined") {
     await SMART_CACHE.put(swrMetaKey, Math.floor(Date.now() / 1000).toString());
   }
@@ -665,6 +689,18 @@ function createSafeResponse(response) {
   safeResponse.headers.delete("Proxy-Authorization");
   safeResponse.headers.delete("Proxy-Authenticate");
 
+  // CRITICAL FIX: Add Vary: Cookie header to prevent cache poisoning
+  // This tells Cloudflare that responses vary based on cookies and should be cached separately
+  // per user authentication state, as per RFC 7234 and Cloudflare best practices
+  const existingVary = safeResponse.headers.get("Vary");
+  if (existingVary) {
+    if (!existingVary.toLowerCase().includes("cookie")) {
+      safeResponse.headers.set("Vary", existingVary + ", Cookie");
+    }
+  } else {
+    safeResponse.headers.set("Vary", "Cookie");
+  }
+
   // Respect origin's cache control but ensure public caching
   const originalCacheControl = response.headers.get("Cache-Control");
   if (
@@ -682,7 +718,7 @@ function createSafeResponse(response) {
   }
 
   // Add edge cache headers for debugging
-  safeResponse.headers.set("x-Edge-Cache-Version", "v2.1");
+  safeResponse.headers.set("x-Edge-Cache-Version", "v3.0");
   safeResponse.headers.set("x-Edge-Cache-Date", new Date().toISOString());
 
   return safeResponse;
@@ -710,7 +746,45 @@ function generateCacheRequest(request, cacheVer) {
     cacheUrl += "?";
   }
   cacheUrl += "cf_edge_cache_ver=" + cacheVer;
+
+  // CRITICAL FIX: Add user authentication state to cache key to prevent cache poisoning
+  // This ensures logged-in users don't see cached anonymous content and vice versa
+  const authState = getUserAuthenticationState(request);
+  cacheUrl += "&cf_auth_state=" + authState;
+
   return new Request(cacheUrl);
+}
+
+// NEW: Generate consistent authentication state identifier for cache key
+function getUserAuthenticationState(request) {
+  const siteType = detectSiteType(request);
+  const analysis = analyzeSessionCookies(request, siteType);
+
+  // Create a stable hash of the authentication state
+  if (analysis.hasAuth) {
+    // For authenticated users, create a hash of their auth cookies
+    // This ensures each user gets their own cache while maintaining privacy
+    const authCookieString = analysis.details.auth.sort().join(",");
+    return "auth_" + simpleHash(authCookieString);
+  } else if (analysis.hasSession) {
+    // For users with session cookies (but not authenticated), use session state
+    return "session";
+  } else {
+    // For completely anonymous users
+    return "anonymous";
+  }
+}
+
+// Simple hash function for creating stable cache key components
+function simpleHash(str) {
+  let hash = 0;
+  if (str.length === 0) return hash.toString();
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36).substring(0, 8);
 }
 
 async function purgeCache() {
