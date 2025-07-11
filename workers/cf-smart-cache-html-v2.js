@@ -20,6 +20,7 @@
  */
 
 // List of cookie prefixes that indicate a logged-in or session user (WordPress, WooCommerce, PHPSESSID, etc.)
+// IMPORTANT: Replace this array with the exported JSON from the plugin admin (cf-smart-cache_export_bypass_cookies)
 const LOGIN_COOKIE_PREFIXES = [
   "wordpress_logged_in",
   "wp-",
@@ -37,8 +38,7 @@ const LOGIN_COOKIE_PREFIXES = [
   "memberpress_",
   "wpsc_",
   "wc_",
-  "jevents_",
-  // Add your own hosting's login/session cookie names or prefixes here
+  "jevents_"
 ];
 
 // cf-smart-cache-html-v2.js
@@ -103,6 +103,7 @@ async function handleRequest(event) {
     r.headers.set("x-HTML-Edge-Cache-Status", "Bypass Login Cookie");
     r.headers.set("x-Edge-Debug-Cookies", (debug.all || []).join(", "));
     r.headers.set("x-Edge-Debug-Login-Match", (debug.matched || []).join(", "));
+    r.headers.set("x-HTML-Edge-Cache-Debug", `bypass=login-cookie;matched=${(debug.matched || []).join(",")}`);
     return r;
   }
 
@@ -134,6 +135,7 @@ async function handleRequest(event) {
         "x-Edge-Cache-SWR-Mode",
         SERVE_STALE_WHILE_REVALIDATE ? "SWR" : "No-SWR"
       );
+      cachedResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=hit");
       return cachedResponse;
     } else if (age <= SWR_WINDOW + 315360000) {
       if (SERVE_STALE_WHILE_REVALIDATE) {
@@ -145,6 +147,7 @@ async function handleRequest(event) {
         );
         cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
         cachedResponse.headers.set("x-Edge-Cache-SWR-Mode", "SWR");
+        cachedResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=stale-while-revalidate");
         event.waitUntil(
           revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event)
         );
@@ -160,6 +163,7 @@ async function handleRequest(event) {
         freshResponse.headers.set("x-HTML-Edge-Cache-Status", "Revalidated");
         freshResponse.headers.set("x-Edge-Cache-Age", "0");
         freshResponse.headers.set("x-Edge-Cache-SWR-Mode", "No-SWR");
+        freshResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=revalidated");
         return freshResponse;
       }
     }
@@ -325,6 +329,7 @@ async function handleRequest(event) {
       "x-HTML-Edge-Cache-Status",
       `Bypass Status/Type: ${response.status}`
     );
+    response.headers.set("x-HTML-Edge-Cache-Debug", `bypass=status-${response.status}`);
     return response;
   }
 
@@ -335,6 +340,7 @@ async function handleRequest(event) {
       "x-HTML-Edge-Cache-Status",
       "Bypass Set-Cookie Response"
     );
+    response.headers.set("x-HTML-Edge-Cache-Debug", "bypass=set-cookie");
     return response;
   }
 
@@ -346,6 +352,7 @@ async function handleRequest(event) {
       "x-HTML-Edge-Cache-Status",
       "Bypass Cache-Control: " + cacheControl
     );
+    response.headers.set("x-HTML-Edge-Cache-Debug", "bypass=cache-control");
     return response;
   }
 
@@ -354,6 +361,7 @@ async function handleRequest(event) {
   safeResponse.headers.delete("Set-Cookie");
   safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
   safeResponse.headers.set("x-HTML-Edge-Cache-Status", "Cached");
+  safeResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=cached");
   if (typeof SMART_CACHE !== "undefined") {
     await SMART_CACHE.put(swrMetaKey, Math.floor(Date.now() / 1000).toString());
   }
