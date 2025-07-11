@@ -1,6 +1,8 @@
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
 <a id="readme-top"></a>
 
+> **🚨 IMPORTANT UPDATE v2.2:** Fixed 419 Page Expired errors on non-WordPress sites! If you're experiencing issues with Laravel, Django, or other frameworks, update to [cf-smart-cache-html-v2.js](workers/cf-smart-cache-html-v2.js) immediately. See [Quick Fix Guide](QUICK_FIX_419.md) for details.
+
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
