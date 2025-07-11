@@ -734,7 +734,7 @@ function cf_smart_cache_options_page_html()
                 <?php wp_nonce_field('cf-smart-cache-purge-all'); ?>
                 <input type="submit" name="cf_smart_cache_purge_all" class="button button-secondary"
                     value="<?php esc_attr_e('Purge All Cache', 'cf-smart-cache'); ?>"
-                    onclick="return confirm('<?php esc_js_e('Are you sure you want to purge all cached content?', 'cf-smart-cache'); ?>');">
+                    onclick="return confirm('<?php echo esc_js(__('Are you sure you want to purge all cached content?', 'cf-smart-cache')); ?>');">
             </form>
 
             <form method="post" style="display: inline-block;">
