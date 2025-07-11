@@ -21,6 +21,41 @@
 
 defined('ABSPATH') or die('No script kiddies please!');
 
+// ===================== Plugin Initialization =====================
+
+/**
+ * Initialize plugin text domain for internationalization
+ */
+function cf_smart_cache_load_textdomain()
+{
+    load_plugin_textdomain(
+        'cf-smart-cache',
+        false,
+        dirname(plugin_basename(__FILE__)) . '/languages'
+    );
+}
+add_action('init', 'cf_smart_cache_load_textdomain');
+
+/**
+ * Initialize plugin
+ */
+function cf_smart_cache_init()
+{
+    // Ensure this only runs once
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    // Load text domain
+    cf_smart_cache_load_textdomain();
+
+    // Initialize edge cache headers and event hooks
+    cf_smart_cache_init_action();
+}
+add_action('plugins_loaded', 'cf_smart_cache_init');
+
 // ===================== Plugin Activation & Deactivation =====================
 
 /**
@@ -371,24 +406,75 @@ add_action('admin_menu', 'cf_smart_cache_add_admin_menu');
 
 function cf_smart_cache_settings_init()
 {
+    // Handle zone refresh with proper capability check
     if (isset($_GET['page']) && $_GET['page'] === 'cf_smart_cache' && isset($_GET['refresh_zones']) && $_GET['refresh_zones'] === 'true') {
-        check_admin_referer('cf-smart-cache-refresh-zones');
+        // Check user capability first
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'cf-smart-cache'));
+        }
+
+        // Verify nonce
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'cf-smart-cache-refresh-zones')) {
+            wp_die(__('Security check failed. Please try again.', 'cf-smart-cache'));
+        }
+
         delete_transient('cf_smart_cache_zone_list');
-        wp_safe_redirect(menu_page_url('cf_smart_cache', false));
+        wp_safe_redirect(admin_url('options-general.php?page=cf_smart_cache'));
         exit;
     }
 
     register_setting('cf_smart_cache_options_group', 'cf_smart_cache_settings', [
-        'sanitize_callback' => 'cf_smart_cache_sanitize_settings'
+        'sanitize_callback' => 'cf_smart_cache_sanitize_settings',
+        'default'           => []
     ]);
-    add_settings_section('cf_smart_cache_api_section', 'Cloudflare API Credentials', null, 'cf_smart_cache');
-    add_settings_field('cf_smart_cache_api_token', 'API Token (Recommended)', 'cf_smart_cache_api_token_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
-    add_settings_field('cf_smart_cache_email', 'Cloudflare Account Email (Legacy)', 'cf_smart_cache_email_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
-    add_settings_field('cf_smart_cache_global_api_key', 'Global API Key (Legacy)', 'cf_smart_cache_global_api_key_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
-    add_settings_field('cf_smart_cache_zone_id', 'Zone', 'cf_smart_cache_zone_id_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
+    add_settings_section(
+        'cf_smart_cache_api_section',
+        __('Cloudflare API Credentials', 'cf-smart-cache'),
+        null,
+        'cf_smart_cache'
+    );
+    add_settings_field(
+        'cf_smart_cache_api_token',
+        __('API Token (Recommended)', 'cf-smart-cache'),
+        'cf_smart_cache_api_token_render',
+        'cf_smart_cache',
+        'cf_smart_cache_api_section'
+    );
+    add_settings_field(
+        'cf_smart_cache_email',
+        __('Cloudflare Account Email (Legacy)', 'cf-smart-cache'),
+        'cf_smart_cache_email_render',
+        'cf_smart_cache',
+        'cf_smart_cache_api_section'
+    );
+    add_settings_field(
+        'cf_smart_cache_global_api_key',
+        __('Global API Key (Legacy)', 'cf-smart-cache'),
+        'cf_smart_cache_global_api_key_render',
+        'cf_smart_cache',
+        'cf_smart_cache_api_section'
+    );
+    add_settings_field(
+        'cf_smart_cache_zone_id',
+        __('Zone', 'cf-smart-cache'),
+        'cf_smart_cache_zone_id_render',
+        'cf_smart_cache',
+        'cf_smart_cache_api_section'
+    );
     // Add bypass cookie list setting
-    add_settings_section('cf_smart_cache_bypass_section', 'Cache Bypass Cookie Prefixes', null, 'cf_smart_cache');
-    add_settings_field('cf_smart_cache_bypass_cookies', 'Bypass Cookie Prefixes (comma-separated)', 'cf_smart_cache_bypass_cookies_render', 'cf_smart_cache', 'cf_smart_cache_bypass_section');
+    add_settings_section(
+        'cf_smart_cache_bypass_section',
+        __('Cache Bypass Cookie Prefixes', 'cf-smart-cache'),
+        null,
+        'cf_smart_cache'
+    );
+    add_settings_field(
+        'cf_smart_cache_bypass_cookies',
+        __('Bypass Cookie Prefixes (comma-separated)', 'cf-smart-cache'),
+        'cf_smart_cache_bypass_cookies_render',
+        'cf_smart_cache',
+        'cf_smart_cache_bypass_section'
+    );
 }
 
 /**
@@ -489,39 +575,84 @@ function cf_smart_cache_fetch_zones()
 
 function cf_smart_cache_api_token_render()
 {
-    $options = get_option('cf_smart_cache_settings');
-    echo "<input type='text' name='cf_smart_cache_settings[cf_smart_cache_api_token]' value='" . esc_attr($options['cf_smart_cache_api_token'] ?? '') . "' class='regular-text'>";
-    echo "<p class='description'>Recommended: Use API tokens for better security. <a href='https://dash.cloudflare.com/profile/api-tokens' target='_blank'>Create API Token</a></p>";
+    $options = get_option('cf_smart_cache_settings', []);
+    $value   = isset($options['cf_smart_cache_api_token']) ? esc_attr($options['cf_smart_cache_api_token']) : '';
+    printf(
+        '<input type="text" name="cf_smart_cache_settings[cf_smart_cache_api_token]" value="%s" class="regular-text" autocomplete="off">',
+        $value
+    );
+    printf(
+        '<p class="description">%s <a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
+        esc_html__('Recommended: Use API tokens for better security.', 'cf-smart-cache'),
+        esc_url('https://dash.cloudflare.com/profile/api-tokens'),
+        esc_html__('Create API Token', 'cf-smart-cache')
+    );
 }
+
 function cf_smart_cache_email_render()
 {
-    $options = get_option('cf_smart_cache_settings');
-    echo "<input type='email' name='cf_smart_cache_settings[cf_smart_cache_email]' value='" . esc_attr($options['cf_smart_cache_email'] ?? '') . "' class='regular-text'>";
+    $options = get_option('cf_smart_cache_settings', []);
+    $value   = isset($options['cf_smart_cache_email']) ? esc_attr($options['cf_smart_cache_email']) : '';
+    printf(
+        '<input type="email" name="cf_smart_cache_settings[cf_smart_cache_email]" value="%s" class="regular-text" autocomplete="email">',
+        $value
+    );
+    printf(
+        '<p class="description">%s</p>',
+        esc_html__('Legacy authentication method. Consider using API tokens instead.', 'cf-smart-cache')
+    );
 }
+
 function cf_smart_cache_global_api_key_render()
 {
-    $options = get_option('cf_smart_cache_settings');
-    echo "<input type='password' name='cf_smart_cache_settings[cf_smart_cache_global_api_key]' value='" . esc_attr($options['cf_smart_cache_global_api_key'] ?? '') . "' class='regular-text'>";
+    $options = get_option('cf_smart_cache_settings', []);
+    $value   = isset($options['cf_smart_cache_global_api_key']) ? esc_attr($options['cf_smart_cache_global_api_key']) : '';
+    printf(
+        '<input type="password" name="cf_smart_cache_settings[cf_smart_cache_global_api_key]" value="%s" class="regular-text" autocomplete="current-password">',
+        $value
+    );
+    printf(
+        '<p class="description">%s</p>',
+        esc_html__('Legacy authentication method. Consider using API tokens instead.', 'cf-smart-cache')
+    );
 }
 function cf_smart_cache_zone_id_render()
 {
-    $options       = get_option('cf_smart_cache_settings');
-    $selected_zone = $options['cf_smart_cache_zone_id'] ?? '';
+    $options       = get_option('cf_smart_cache_settings', []);
+    $selected_zone = isset($options['cf_smart_cache_zone_id']) ? $options['cf_smart_cache_zone_id'] : '';
     $zones_data    = cf_smart_cache_fetch_zones();
+
     if (is_wp_error($zones_data)) {
         if ($zones_data->get_error_code() === 'missing_creds') {
-            echo '<p class="description">Please enter and save your email and global API key first. The available zone list will appear here after saving.</p>';
+            printf(
+                '<p class="description">%s</p>',
+                esc_html__('Please enter and save your API credentials first. The available zone list will appear here after saving.', 'cf-smart-cache')
+            );
         } else {
-            echo '<p class="description" style="color: #d63638;"><strong>Error:</strong> Failed to fetch zone list. ' . esc_html($zones_data->get_error_message()) . '</p>';
+            printf(
+                '<p class="description" style="color: #d63638;"><strong>%s:</strong> %s %s</p>',
+                esc_html__('Error', 'cf-smart-cache'),
+                esc_html__('Failed to fetch zone list.', 'cf-smart-cache'),
+                esc_html($zones_data->get_error_message())
+            );
         }
         return;
     }
+
     if (empty($zones_data)) {
-        echo '<p class="description">No zones found for this account.</p>';
+        printf(
+            '<p class="description">%s</p>',
+            esc_html__('No zones found for this account.', 'cf-smart-cache')
+        );
         return;
     }
-    echo "<select name='cf_smart_cache_settings[cf_smart_cache_zone_id]'>";
-    echo "<option value=''>-- Select a zone --</option>";
+
+    echo '<select name="cf_smart_cache_settings[cf_smart_cache_zone_id]">';
+    printf(
+        '<option value="">%s</option>',
+        esc_html__('-- Select a zone --', 'cf-smart-cache')
+    );
+
     foreach ($zones_data as $zone) {
         printf(
             '<option value="%s" %s>%s</option>',
@@ -531,25 +662,53 @@ function cf_smart_cache_zone_id_render()
         );
     }
     echo "</select>";
-    $refresh_url = wp_nonce_url(menu_page_url('cf_smart_cache', false) . '&refresh_zones=true', 'cf-smart-cache-refresh-zones');
-    echo " <a href='" . esc_url($refresh_url) . "'>Refresh List</a>";
+
+    $refresh_url = wp_nonce_url(
+        admin_url('options-general.php?page=cf_smart_cache&refresh_zones=true'),
+        'cf-smart-cache-refresh-zones'
+    );
+    printf(
+        ' <a href="%s">%s</a>',
+        esc_url($refresh_url),
+        esc_html__('Refresh List', 'cf-smart-cache')
+    );
 }
+
 // Render bypass cookie list field
 function cf_smart_cache_bypass_cookies_render()
 {
-    $options = get_option('cf_smart_cache_settings');
-    $val     = isset($options['cf_smart_cache_bypass_cookies']) ? esc_attr($options['cf_smart_cache_bypass_cookies']) : '';
-    echo "<input type='text' name='cf_smart_cache_settings[cf_smart_cache_bypass_cookies]' value='{$val}' class='regular-text'>";
-    echo "<p class='description'>Comma-separated list of cookie name prefixes that will trigger cache bypass. <strong>This list must match the Worker configuration.</strong></p>";
+    $options = get_option('cf_smart_cache_settings', []);
+    $value   = isset($options['cf_smart_cache_bypass_cookies']) ? esc_attr($options['cf_smart_cache_bypass_cookies']) : '';
+
+    printf(
+        '<input type="text" name="cf_smart_cache_settings[cf_smart_cache_bypass_cookies]" value="%s" class="regular-text">',
+        $value
+    );
+    printf(
+        '<p class="description">%s <strong>%s</strong></p>',
+        esc_html__('Comma-separated list of cookie name prefixes that will trigger cache bypass.', 'cf-smart-cache'),
+        esc_html__('This list must match the Worker configuration.', 'cf-smart-cache')
+    );
 }
 function cf_smart_cache_options_page_html()
 {
-    // Handle manual purge actions
-    if (isset($_POST['cf_smart_cache_purge_all']) && check_admin_referer('cf-smart-cache-purge-all')) {
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to access this page.', 'cf-smart-cache'));
+    }
+
+    // Handle manual purge actions with proper nonce verification
+    if (isset($_POST['cf_smart_cache_purge_all'])) {
+        if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'cf-smart-cache-purge-all')) {
+            wp_die(__('Security check failed. Please try again.', 'cf-smart-cache'));
+        }
         cf_smart_cache_purge_all_cache();
     }
 
-    if (isset($_POST['cf_smart_cache_purge_home']) && check_admin_referer('cf-smart-cache-purge-home')) {
+    if (isset($_POST['cf_smart_cache_purge_home'])) {
+        if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'cf-smart-cache-purge-home')) {
+            wp_die(__('Security check failed. Please try again.', 'cf-smart-cache'));
+        }
         cf_smart_cache_batch_purge([home_url('/')]);
     }
 
@@ -562,32 +721,33 @@ function cf_smart_cache_options_page_html()
             <?php
             settings_fields('cf_smart_cache_options_group');
             do_settings_sections('cf_smart_cache');
-            submit_button('Save Settings');
+            submit_button(__('Save Settings', 'cf-smart-cache'));
             ?>
         </form>
 
         <hr>
 
         <!-- Manual Cache Controls -->
-        <h2>Manual Cache Controls</h2>
+        <h2><?php esc_html_e('Manual Cache Controls', 'cf-smart-cache'); ?></h2>
         <div class="cf-cache-controls">
             <form method="post" style="display: inline-block; margin-right: 10px;">
                 <?php wp_nonce_field('cf-smart-cache-purge-all'); ?>
-                <input type="submit" name="cf_smart_cache_purge_all" class="button button-secondary" value="Purge All Cache"
-                    onclick="return confirm('Are you sure you want to purge all cached content?');">
+                <input type="submit" name="cf_smart_cache_purge_all" class="button button-secondary"
+                    value="<?php esc_attr_e('Purge All Cache', 'cf-smart-cache'); ?>"
+                    onclick="return confirm('<?php esc_js_e('Are you sure you want to purge all cached content?', 'cf-smart-cache'); ?>');">
             </form>
 
             <form method="post" style="display: inline-block;">
                 <?php wp_nonce_field('cf-smart-cache-purge-home'); ?>
                 <input type="submit" name="cf_smart_cache_purge_home" class="button button-secondary"
-                    value="Purge Homepage">
+                    value="<?php esc_attr_e('Purge Homepage', 'cf-smart-cache'); ?>">
             </form>
         </div>
 
         <hr>
 
         <!-- Cache Status and Statistics -->
-        <h2>Cache Status</h2>
+        <h2><?php esc_html_e('Cache Status', 'cf-smart-cache'); ?></h2>
         <?php cf_smart_cache_display_cache_status(); ?>
     </div>
     <?php
@@ -647,23 +807,34 @@ function cf_smart_cache_purge_all_cache()
 }
 
 /**
- * Display cache status and statistics
+ * Display cache status and statistics with improved security and i18n
  */
 function cf_smart_cache_display_cache_status()
 {
-    $settings = get_option('cf_smart_cache_settings');
-    $zone_id  = $settings['cf_smart_cache_zone_id'] ?? '';
+    $settings = get_option('cf_smart_cache_settings', []);
+    $zone_id  = isset($settings['cf_smart_cache_zone_id']) ? $settings['cf_smart_cache_zone_id'] : '';
 
     echo '<div class="cf-cache-status">';
     if (empty($zone_id)) {
-        echo '<p><span class="dashicons dashicons-warning" style="color: #f56e28;"></span> Please configure your Cloudflare API credentials and select a zone.</p>';
+        printf(
+            '<p><span class="dashicons dashicons-warning" style="color: #f56e28;"></span> %s</p>',
+            esc_html__('Please configure your Cloudflare API credentials and select a zone.', 'cf-smart-cache')
+        );
     } else {
-        echo '<p><span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span> Cloudflare Smart Cache is active for zone: <code>' . esc_html($zone_id) . '</code></p>';
+        printf(
+            '<p><span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span> %s <code>%s</code></p>',
+            esc_html__('Cloudflare Smart Cache is active for zone:', 'cf-smart-cache'),
+            esc_html($zone_id)
+        );
 
         // Show recent activity
         $rate_limit_key = 'cf_smart_cache_rate_limit';
         $requests_count = get_transient($rate_limit_key) ?: 0;
-        echo '<p>API requests in last 5 minutes: ' . intval($requests_count) . '/1000</p>';
+        printf(
+            '<p>%s %d/1000</p>',
+            esc_html__('API requests in last 5 minutes:', 'cf-smart-cache'),
+            absint($requests_count)
+        );
     }
     echo '</div>';
 }
@@ -928,16 +1099,26 @@ add_action('delete_term', 'cf_smart_cache_on_term_change', 10, 1);
 
 function cf_smart_cache_display_admin_notice()
 {
-    $notice = get_transient('cf_smart_cache_notice_' . get_current_user_id());
+    // Check if user can see admin notices
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    $user_id = get_current_user_id();
+    $notice  = get_transient('cf_smart_cache_notice_' . $user_id);
+
     if ($notice) {
-        $is_error = stripos($notice, 'Error') !== false;
+        $is_error = strpos($notice, 'Error') !== false;
         $class    = $is_error ? 'notice-error' : 'notice-success';
+
         printf(
-            '<div class="notice %s is-dismissible"><p><strong>CF Smart Cache:</strong> %s</p></div>',
+            '<div class="notice %s is-dismissible"><p><strong>%s:</strong> %s</p></div>',
             esc_attr($class),
+            esc_html__('CF Smart Cache', 'cf-smart-cache'),
             esc_html($notice)
         );
-        delete_transient('cf_smart_cache_notice_' . get_current_user_id());
+
+        delete_transient('cf_smart_cache_notice_' . $user_id);
     }
 }
 add_action('admin_notices', 'cf_smart_cache_display_admin_notice');
@@ -1094,22 +1275,34 @@ function cf_smart_cache_admin_bar_menu($wp_admin_bar)
 add_action('admin_bar_menu', 'cf_smart_cache_admin_bar_menu', 999);
 
 /**
- * Handle admin toolbar cache actions
+ * Handle admin toolbar cache actions with improved security
  */
 function cf_smart_cache_handle_admin_actions()
 {
+    // Check user capabilities first
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to perform this action.', 'cf-smart-cache'));
+    }
+
     // Purge current page
     if (isset($_GET['action']) && $_GET['action'] === 'cf_smart_cache_purge_current') {
-        check_admin_referer('cf-smart-cache-purge-current');
+        // Verify nonce
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'cf-smart-cache-purge-current')) {
+            wp_die(__('Security check failed. Please try again.', 'cf-smart-cache'));
+        }
 
-        $post_id = intval($_GET['post_id'] ?? 0);
+        $post_id = isset($_GET['post_id']) ? absint($_GET['post_id']) : 0;
         if ($post_id > 0) {
             $urls = cf_smart_cache_get_post_purge_urls($post_id);
             if (!empty($urls)) {
                 cf_smart_cache_batch_purge($urls);
 
                 $user_id = get_current_user_id();
-                $message = sprintf('Cache purged for current page and related URLs (%d URLs)', count($urls));
+                $message = sprintf(
+                    /* translators: %d: number of URLs purged */
+                    __('Cache purged for current page and related URLs (%d URLs)', 'cf-smart-cache'),
+                    count($urls)
+                );
                 set_transient("cf_smart_cache_notice_{$user_id}", $message, 30);
             }
         }
@@ -1120,12 +1313,15 @@ function cf_smart_cache_handle_admin_actions()
 
     // Purge all cache
     if (isset($_GET['action']) && $_GET['action'] === 'cf_smart_cache_purge_all') {
-        check_admin_referer('cf-smart-cache-purge-all');
+        // Verify nonce
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'cf-smart-cache-purge-all')) {
+            wp_die(__('Security check failed. Please try again.', 'cf-smart-cache'));
+        }
 
         cf_smart_cache_purge_all_cache();
 
         $user_id = get_current_user_id();
-        set_transient("cf_smart_cache_notice_{$user_id}", 'All cache purged successfully', 30);
+        set_transient("cf_smart_cache_notice_{$user_id}", __('All cache purged successfully', 'cf-smart-cache'), 30);
 
         wp_safe_redirect(wp_get_referer() ?: admin_url());
         exit;
@@ -1316,24 +1512,66 @@ function cf_smart_cache_get_plugin_info()
 
 add_action('admin_notices', function ()
 {
-    if (isset($_GET['page']) && $_GET['page'] === 'cf_smart_cache') {
-        echo '<div class="notice notice-warning"><p><strong>Cloudflare Smart Cache:</strong> The <em>Bypass Cookie Prefixes</em> list <b>must</b> match the configuration in your Cloudflare Worker (<code>LOGIN_COOKIE_PREFIXES</code>). <a href="admin.php?page=cf_smart_cache_export_bypass_cookies" target="_blank">Export as JSON for Worker</a>. <br>If you update this list, you <b>must</b> redeploy your Worker with the new list for security. <br><b>Failure to do so can result in private/admin content being cached and leaked to anonymous users!</b></p></div>';
+    // Only show on our plugin's admin page
+    if (!isset($_GET['page']) || $_GET['page'] !== 'cf_smart_cache') {
+        return;
     }
+
+    // Check user capability
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    $export_url = esc_url(admin_url('admin.php?page=cf_smart_cache_export_bypass_cookies'));
+
+    printf(
+        '<div class="notice notice-warning"><p><strong>%s:</strong> %s <a href="%s" target="_blank">%s</a>. <br>%s <br><b>%s</b></p></div>',
+        esc_html__('Cloudflare Smart Cache', 'cf-smart-cache'),
+        esc_html__('The Bypass Cookie Prefixes list must match the configuration in your Cloudflare Worker (LOGIN_COOKIE_PREFIXES).', 'cf-smart-cache'),
+        $export_url,
+        esc_html__('Export as JSON for Worker', 'cf-smart-cache'),
+        esc_html__('If you update this list, you must redeploy your Worker with the new list for security.', 'cf-smart-cache'),
+        esc_html__('Failure to do so can result in private/admin content being cached and leaked to anonymous users!', 'cf-smart-cache')
+    );
 });
 
-// Export bypass cookie prefix list as JSON for Worker
+// Export bypass cookie prefix list as JSON for Worker with improved security
 function cf_smart_cache_export_bypass_cookies_page()
 {
+    // Check user capability
     if (!current_user_can('manage_options')) {
-        wp_die('Unauthorized');
+        wp_die(__('You do not have sufficient permissions to access this page.', 'cf-smart-cache'));
     }
-    $options = get_option('cf_smart_cache_settings');
-    $list    = isset($options['cf_smart_cache_bypass_cookies']) ? array_map('trim', explode(',', $options['cf_smart_cache_bypass_cookies'])) : [];
-    $json    = json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-    echo '<div class="wrap"><h1>Export Bypass Cookie Prefixes for Worker</h1>';
-    echo '<p>Copy the following JSON array and paste it into your Worker as <code>LOGIN_COOKIE_PREFIXES</code>:</p>';
-    echo '<textarea rows="10" cols="80" readonly>' . esc_textarea($json) . '</textarea>';
-    echo '<p><a href="' . esc_url(admin_url('admin.php?page=cf_smart_cache')) . '">Back to Settings</a></p>';
+
+    $options     = get_option('cf_smart_cache_settings', []);
+    $cookie_list = isset($options['cf_smart_cache_bypass_cookies']) && !empty($options['cf_smart_cache_bypass_cookies'])
+        ? array_filter(array_map('trim', explode(',', $options['cf_smart_cache_bypass_cookies'])))
+        : [
+            'wordpress_logged_in',
+            'wp-',
+            'wordpress_sec',
+            'woocommerce_',
+            'PHPSESSID',
+            'session',
+            'auth',
+            'token',
+            'user',
+            'wordpress',
+            'comment_',
+            'wp_postpass',
+            'edd_',
+            'memberpress_',
+            'wpsc_',
+            'wc_',
+            'jevents_'
+        ];
+
+    $json = wp_json_encode($cookie_list, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+    printf('<div class="wrap"><h1>%s</h1>', esc_html__('Export Bypass Cookie Prefixes for Worker', 'cf-smart-cache'));
+    printf('<p>%s <code>LOGIN_COOKIE_PREFIXES</code>:</p>', esc_html__('Copy the following JSON array and paste it into your Worker as', 'cf-smart-cache'));
+    printf('<textarea rows="10" cols="80" readonly>%s</textarea>', esc_textarea($json));
+    printf('<p><a href="%s">%s</a></p>', esc_url(admin_url('options-general.php?page=cf_smart_cache')), esc_html__('Back to Settings', 'cf-smart-cache'));
     echo '</div>';
 }
 add_action('admin_menu', function ()
