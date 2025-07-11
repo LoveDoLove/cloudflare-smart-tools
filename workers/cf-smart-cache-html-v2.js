@@ -38,8 +38,22 @@ async function handleRequest(event) {
     return cachedResponse;
   }
 
-  // Forward request to origin
-  let forwardRequest = new Request(request);
+  // Forward request to origin, preserving all properties (including credentials/cookies)
+  let forwardRequest = new Request(request.url, {
+    method: request.method,
+    headers: new Headers(request.headers),
+    body: request.body,
+    redirect: request.redirect,
+    credentials: request.credentials,
+    cache: request.cache,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    integrity: request.integrity,
+    keepalive: request.keepalive,
+    mode: request.mode,
+    signal: request.signal,
+    duplex: request.duplex
+  });
   forwardRequest.headers.set(
     "x-HTML-Edge-Cache",
     "supports=cache|purgeall|bypass-cookies"
