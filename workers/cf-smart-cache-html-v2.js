@@ -78,7 +78,7 @@ async function forwardAndProcessResponse(request, event) {
  * @returns {Promise<Response>}
  */
 async function processForwardedResponse(originalRequest, response, event) {
-  // --- Improved Smart Caching Logic ---
+  // --- Smarter KV-based Smart Caching Logic ---
   // Only cache safe, non-dynamic HTML responses. Avoid caching if:
   // - The request has cookies that indicate a logged-in or dynamic session
   // - The response has Set-Cookie headers (dynamic content)
@@ -143,25 +143,21 @@ async function processForwardedResponse(originalRequest, response, event) {
     }
   }
 
-  // 6. If not bypassed, cache the response (public, safe, static HTML)
+  // 6. If not bypassed, cache the response (public, safe, static HTML) using KV versioning
   if (!bypassCache && method === "GET") {
-    // Remove Set-Cookie header for cache safety
-    let safeResponse = new Response(response.body, response);
-    safeResponse.headers.delete("Set-Cookie");
-    safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
-    // Optionally, add a custom header for cache status
-    safeResponse.headers.set("x-HTML-Edge-Cache-Status", "Hit");
-    // Store in cache (if using KV, implement versioning as in v1)
-    // For now, use the default cache
     try {
-      cacheVer = 0; // For future: implement versioning
-      const cacheKeyRequest = new Request(originalRequest.url + `?cf_edge_cache_ver=${cacheVer}`);
+      cacheVer = await GetCurrentCacheVersion();
+      const cacheKeyRequest = GenerateCacheRequest(originalRequest, cacheVer);
+      let safeResponse = new Response(response.body, response);
+      safeResponse.headers.delete("Set-Cookie");
+      safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
+      safeResponse.headers.set("x-HTML-Edge-Cache-Status", "Hit");
       event.waitUntil(caches.default.put(cacheKeyRequest, safeResponse.clone()));
       return safeResponse;
     } catch (err) {
-      // If cache fails, just return the response
-      safeResponse.headers.set("x-HTML-Edge-Cache-Status", "Cache Write Exception");
-      return safeResponse;
+      let errorResponse = new Response(response.body, response);
+      errorResponse.headers.set("x-HTML-Edge-Cache-Status", "Cache Write Exception");
+      return errorResponse;
     }
   }
 
@@ -169,6 +165,61 @@ async function processForwardedResponse(originalRequest, response, event) {
   let bypassedResponse = new Response(response.body, response);
   bypassedResponse.headers.set("x-HTML-Edge-Cache-Status", status);
   return bypassedResponse;
+}
+
+// Retrieve the current cache version from KV
+async function GetCurrentCacheVersion() {
+  if (typeof EDGE_CACHE !== "undefined") {
+    let cacheVer = await EDGE_CACHE.get("html_cache_version");
+    if (cacheVer === null) {
+      cacheVer = 0;
+      await EDGE_CACHE.put("html_cache_version", cacheVer.toString());
+    } else {
+      cacheVer = parseInt(cacheVer);
+    }
+    return cacheVer;
+  } else {
+    // Fallback: no KV, use static version
+    return 0;
+  }
+}
+
+// Generate the versioned Request object to use for cache operations
+function GenerateCacheRequest(request, cacheVer) {
+  let cacheUrl = request.url;
+  if (cacheUrl.indexOf("?") >= 0) {
+    cacheUrl += "&";
+  } else {
+    cacheUrl += "?";
+  }
+  cacheUrl += "cf_edge_cache_ver=" + cacheVer;
+  return new Request(cacheUrl);
+}
+
+// Purge the HTML cache by bumping the version number in KV
+async function purgeCache(event) {
+  if (typeof EDGE_CACHE !== "undefined") {
+    let cacheVer = await GetCurrentCacheVersion();
+    cacheVer++;
+    event.waitUntil(EDGE_CACHE.put("html_cache_version", cacheVer.toString()));
+  } else {
+    // Fallback: Purge everything using the API
+    const url =
+      "https://api.cloudflare.com/client/v4/zones/" +
+      CLOUDFLARE_API.zone +
+      "/purge_cache";
+    event.waitUntil(
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "X-Auth-Email": CLOUDFLARE_API.email,
+          "X-Auth-Key": CLOUDFLARE_API.key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ purge_everything: true }),
+      })
+    );
+  }
 }
 
 // Additional modular functions (cache, purge, bypass, etc.) will be implemented in subsequent steps.
