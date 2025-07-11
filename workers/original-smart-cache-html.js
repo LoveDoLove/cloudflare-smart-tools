@@ -4,9 +4,11 @@
 // instead of the full cache.
 
 // API settings if KV isn't being used
-// These are now securely provided via environment variables (env bindings)
-// Set CLOUDFLARE_EMAIL, CLOUDFLARE_API_KEY, and CLOUDFLARE_ZONE_ID in wrangler.toml or the Cloudflare dashboard.
-let CLOUDFLARE_API = null;
+const CLOUDFLARE_API = {
+  email: "", // From https://dash.cloudflare.com/profile
+  key: "", // Global API Key from https://dash.cloudflare.com/profile
+  zone: "", // "Zone ID" from the API section of the dashboard overview page https://dash.cloudflare.com/
+};
 
 // Default cookie prefixes for bypass
 const DEFAULT_BYPASS_COOKIES = [
@@ -24,49 +26,36 @@ const BYPASS_URL_PATTERNS = [/\/wp-admin\/.*/, /\/wp-adminlogin\/.*/];
 /**
  * Main worker entry point.
  */
+addEventListener("fetch", (event) => {
+  const request = event.request;
+  let upstreamCache = request.headers.get("x-HTML-Edge-Cache");
 
-// Module Worker entrypoint: use env for secure bindings
-export default {
-  async fetch(request, env, ctx) {
-    // Set up CLOUDFLARE_API from env on first request
-    if (!CLOUDFLARE_API) {
-      CLOUDFLARE_API = {
-        email: env.CLOUDFLARE_EMAIL || "",
-        key: env.CLOUDFLARE_API_KEY || "",
-        zone: env.CLOUDFLARE_ZONE_ID || "",
-      };
-    }
-    let upstreamCache = request.headers.get("x-HTML-Edge-Cache");
+  // Only process requests if KV store is set up and there is no
+  // HTML edge cache in front of this worker (only the outermost cache
+  // should handle HTML caching in case there are varying levels of support).
+  let configured = false;
+  if (typeof SMART_CACHE !== "undefined") {
+    configured = true;
+  } else if (
+    CLOUDFLARE_API.email.length &&
+    CLOUDFLARE_API.key.length &&
+    CLOUDFLARE_API.zone.length
+  ) {
+    configured = true;
+  }
 
-    // Only process requests if KV store is set up and there is no
-    // HTML edge cache in front of this worker (only the outermost cache
-    // should handle HTML caching in case there are varying levels of support).
-    let configured = false;
-    if (typeof env.SMART_CACHE !== "undefined") {
-      configured = true;
-    } else if (
-      CLOUDFLARE_API.email.length &&
-      CLOUDFLARE_API.key.length &&
-      CLOUDFLARE_API.zone.length
-    ) {
-      configured = true;
-    }
+  // Bypass processing of image requests (for everything except Firefox which doesn't use image/*)
+  const accept = request.headers.get("Accept");
+  let isImage = false;
+  if (accept && accept.indexOf("image/*") !== -1) {
+    isImage = true;
+  }
 
-    // Bypass processing of image requests (for everything except Firefox which doesn't use image/*)
-    const accept = request.headers.get("Accept");
-    let isImage = false;
-    if (accept && accept.indexOf("image/*") !== -1) {
-      isImage = true;
-    }
-
-    if (configured && !isImage && upstreamCache === null) {
-      ctx.passThroughOnException && ctx.passThroughOnException();
-      return await processRequest(request, env, ctx);
-    }
-    // Default: pass through
-    return fetch(request);
-  },
-};
+  if (configured && !isImage && upstreamCache === null) {
+    event.passThroughOnException();
+    event.respondWith(processRequest(request, event));
+  }
+});
 
 /**
  * Process every request coming through to add the edge-cache header,
@@ -75,21 +64,12 @@ export default {
  * @param {Request} originalRequest - Original request
  * @param {Event} event - Original event (for additional async waiting)
  */
-/**
- * Process every request coming through to add the edge-cache header,
- * watch for purge responses and possibly cache HTML GET requests.
- *
- * @param {Request} originalRequest - Original request
- * @param {Object} env - Environment bindings (for secrets, KV, etc)
- * @param {Object} ctx - Execution context
- */
-async function processRequest(originalRequest, env, ctx) {
+async function processRequest(originalRequest, event) {
   let cfCacheStatus = null;
   const accept = originalRequest.headers.get("Accept");
   const isHTML = accept && accept.indexOf("text/html") >= 0;
   let { response, cacheVer, status, bypassCache } = await getCachedResponse(
-    originalRequest,
-    env
+    originalRequest
   );
 
   if (response === null) {
@@ -104,7 +84,7 @@ async function processRequest(originalRequest, env, ctx) {
     if (response) {
       const options = getResponseOptions(response);
       if (options && options.purge) {
-        await purgeCache(cacheVer, env, ctx);
+        await purgeCache(cacheVer, event);
         status += ", Purged";
       }
       bypassCache = bypassCache || shouldBypassEdgeCache(request, response);
@@ -119,8 +99,7 @@ async function processRequest(originalRequest, env, ctx) {
           cacheVer,
           originalRequest,
           response,
-          env,
-          ctx
+          event
         );
       }
     }
@@ -136,8 +115,7 @@ async function processRequest(originalRequest, env, ctx) {
         const options = getResponseOptions(response);
         if (!options) {
           status += ", Refreshed";
-          ctx.waitUntil &&
-            ctx.waitUntil(updateCache(originalRequest, cacheVer, env, ctx));
+          event.waitUntil(updateCache(originalRequest, cacheVer, event));
         }
       }
     }
@@ -225,7 +203,7 @@ const CACHE_HEADERS = ["Cache-Control", "Expires", "Pragma"];
  *
  * @param {Request} request - Original request
  */
-async function getCachedResponse(request, env) {
+async function getCachedResponse(request) {
   let response = null;
   let cacheVer = null;
   let bypassCache = false;
@@ -247,7 +225,7 @@ async function getCachedResponse(request, env) {
     accept.indexOf("text/html") >= 0
   ) {
     // Build the versioned URL for checking the cache
-    cacheVer = await GetCurrentCacheVersion(cacheVer, env);
+    cacheVer = await GetCurrentCacheVersion(cacheVer);
     const cacheKeyRequest = GenerateCacheRequest(request, cacheVer);
 
     // See if there is a request match in the cache
@@ -298,33 +276,29 @@ async function getCachedResponse(request, env) {
  * @param {Int} cacheVer - Current cache version (if retrieved)
  * @param {Event} event - Original event
  */
-async function purgeCache(cacheVer, env, ctx) {
-  if (typeof env.SMART_CACHE !== "undefined") {
+async function purgeCache(cacheVer, event) {
+  if (typeof SMART_CACHE !== "undefined") {
     // Purge the KV cache by bumping the version number
-    cacheVer = await GetCurrentCacheVersion(cacheVer, env);
+    cacheVer = await GetCurrentCacheVersion(cacheVer);
     cacheVer++;
-    ctx.waitUntil &&
-      ctx.waitUntil(
-        env.SMART_CACHE.put("html_cache_version", cacheVer.toString())
-      );
+    event.waitUntil(SMART_CACHE.put("html_cache_version", cacheVer.toString()));
   } else {
     // Purge everything using the API
     const url =
       "https://api.cloudflare.com/client/v4/zones/" +
-      (env.CLOUDFLARE_ZONE_ID || "") +
+      CLOUDFLARE_API.zone +
       "/purge_cache";
-    ctx.waitUntil &&
-      ctx.waitUntil(
-        fetch(url, {
-          method: "POST",
-          headers: {
-            "X-Auth-Email": env.CLOUDFLARE_EMAIL,
-            "X-Auth-Key": env.CLOUDFLARE_API_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ purge_everything: true }),
-        })
-      );
+    event.waitUntil(
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "X-Auth-Email": CLOUDFLARE_API.email,
+          "X-Auth-Key": CLOUDFLARE_API.key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ purge_everything: true }),
+      })
+    );
   }
 }
 
@@ -334,7 +308,7 @@ async function purgeCache(cacheVer, env, ctx) {
  * @param {String} cacheVer - Cache Version
  * @param {EVent} event - Original event
  */
-async function updateCache(originalRequest, cacheVer, env, ctx) {
+async function updateCache(originalRequest, cacheVer, event) {
   // Clone the request, add the edge-cache header and send it through.
   let request = new Request(originalRequest);
   request.headers.set(
@@ -347,11 +321,11 @@ async function updateCache(originalRequest, cacheVer, env, ctx) {
     status = ": Fetched";
     const options = getResponseOptions(response);
     if (options && options.purge) {
-      await purgeCache(cacheVer, env, ctx);
+      await purgeCache(cacheVer, event);
     }
     let bypassCache = shouldBypassEdgeCache(request, response);
     if ((!options || options.cache) && !bypassCache) {
-      await cacheResponse(cacheVer, originalRequest, response, env, ctx);
+      await cacheResponse(cacheVer, originalRequest, response, event);
     }
   }
 }
@@ -365,7 +339,7 @@ async function updateCache(originalRequest, cacheVer, env, ctx) {
  * @param {Event} event - Original event
  * @returns {bool} true if the response was cached
  */
-async function cacheResponse(cacheVer, request, originalResponse, env, ctx) {
+async function cacheResponse(cacheVer, request, originalResponse, event) {
   let status = "";
   const accept = request.headers.get("Accept");
   if (
@@ -374,7 +348,7 @@ async function cacheResponse(cacheVer, request, originalResponse, env, ctx) {
     accept &&
     accept.indexOf("text/html") >= 0
   ) {
-    cacheVer = await GetCurrentCacheVersion(cacheVer, env);
+    cacheVer = await GetCurrentCacheVersion(cacheVer);
     const cacheKeyRequest = GenerateCacheRequest(request, cacheVer);
 
     try {
@@ -393,7 +367,7 @@ async function cacheResponse(cacheVer, request, originalResponse, env, ctx) {
       }
       response.headers.delete("Set-Cookie");
       response.headers.set("Cache-Control", "public; max-age=315360000");
-      ctx.waitUntil && ctx.waitUntil(cache.put(cacheKeyRequest, response));
+      event.waitUntil(cache.put(cacheKeyRequest, response));
       status = ", Cached";
     } catch (err) {
       // status = ", Cache Write Exception: " + err.message;
@@ -449,15 +423,15 @@ function getResponseOptions(response) {
  * @param {Int} cacheVer - Current cache version value if set.
  * @returns {Int} The current cache version.
  */
-async function GetCurrentCacheVersion(cacheVer, env) {
+async function GetCurrentCacheVersion(cacheVer) {
   if (cacheVer === null) {
-    if (typeof env.SMART_CACHE !== "undefined") {
-      cacheVer = await env.SMART_CACHE.get("html_cache_version");
+    if (typeof SMART_CACHE !== "undefined") {
+      cacheVer = await SMART_CACHE.get("html_cache_version");
       if (cacheVer === null) {
         // Uninitialized - first time through, initialize KV with a value
         // Blocking but should only happen immediately after worker activation.
         cacheVer = 0;
-        await env.SMART_CACHE.put("html_cache_version", cacheVer.toString());
+        await SMART_CACHE.put("html_cache_version", cacheVer.toString());
       } else {
         cacheVer = parseInt(cacheVer);
       }
