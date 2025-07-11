@@ -1,0 +1,1 @@
+(http.request.uri wildcard r"/wp-admin*") or (http.cookie wildcard r"wordpress_sec_*")
