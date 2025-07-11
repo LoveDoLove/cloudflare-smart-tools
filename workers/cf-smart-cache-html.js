@@ -88,7 +88,8 @@ async function processRequest(originalRequest, env, ctx) {
   const accept = originalRequest.headers.get("Accept");
   const isHTML = accept && accept.indexOf("text/html") >= 0;
   let { response, cacheVer, status, bypassCache } = await getCachedResponse(
-    originalRequest, env
+    originalRequest,
+    env
   );
 
   if (response === null) {
@@ -135,7 +136,8 @@ async function processRequest(originalRequest, env, ctx) {
         const options = getResponseOptions(response);
         if (!options) {
           status += ", Refreshed";
-          ctx.waitUntil && ctx.waitUntil(updateCache(originalRequest, cacheVer, env, ctx));
+          ctx.waitUntil &&
+            ctx.waitUntil(updateCache(originalRequest, cacheVer, env, ctx));
         }
       }
     }
@@ -301,24 +303,28 @@ async function purgeCache(cacheVer, env, ctx) {
     // Purge the KV cache by bumping the version number
     cacheVer = await GetCurrentCacheVersion(cacheVer, env);
     cacheVer++;
-    ctx.waitUntil && ctx.waitUntil(env.SMART_CACHE.put("html_cache_version", cacheVer.toString()));
+    ctx.waitUntil &&
+      ctx.waitUntil(
+        env.SMART_CACHE.put("html_cache_version", cacheVer.toString())
+      );
   } else {
     // Purge everything using the API
     const url =
       "https://api.cloudflare.com/client/v4/zones/" +
       (env.CLOUDFLARE_ZONE_ID || "") +
       "/purge_cache";
-    ctx.waitUntil && ctx.waitUntil(
-      fetch(url, {
-        method: "POST",
-        headers: {
-          "X-Auth-Email": env.CLOUDFLARE_EMAIL,
-          "X-Auth-Key": env.CLOUDFLARE_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ purge_everything: true }),
-      })
-    );
+    ctx.waitUntil &&
+      ctx.waitUntil(
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "X-Auth-Email": env.CLOUDFLARE_EMAIL,
+            "X-Auth-Key": env.CLOUDFLARE_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ purge_everything: true }),
+        })
+      );
   }
 }
 
