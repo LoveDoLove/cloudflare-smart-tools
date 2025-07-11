@@ -19,89 +19,88 @@
  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// Security: Comprehensive list of cookie prefixes that indicate logged-in or session users
-// IMPORTANT: Replace this array with the exported JSON from the plugin admin (cf-smart-cache_export_bypass_cookies)
-// This list covers WordPress, WooCommerce, popular plugins, and common session management systems
-const LOGIN_COOKIE_PREFIXES = [
-  // WordPress Core
+// Security: WordPress-specific login cookies (only applied when WordPress is detected)
+const WORDPRESS_LOGIN_COOKIES = [
   "wordpress_logged_in",
-  "wp-",
   "wordpress_sec",
   "wordpress_test_cookie",
-  
-  // WordPress Comments & Posts
-  "comment_",
+  "comment_author",
   "wp_postpass",
-  
-  // WooCommerce
+];
+
+// Security: Authentication cookies that indicate logged-in users (universal)
+const UNIVERSAL_AUTH_COOKIES = [
+  "auth",
+  "authenticated",
+  "login",
+  "logged_in",
+  "user_id",
+  "userid",
+  "uid",
+  "token",
+  "access_token",
+  "refresh_token",
+  "jwt",
+  "bearer",
+];
+
+// Security: Session cookies that should NOT bypass cache unless they indicate authentication
+const FRAMEWORK_SESSION_COOKIES = [
+  // Laravel
+  { pattern: "laravel_session", requiresAuth: false, framework: "laravel" },
+  { pattern: "XSRF-TOKEN", requiresAuth: false, framework: "laravel" },
+
+  // Django
+  { pattern: "sessionid", requiresAuth: false, framework: "django" },
+  { pattern: "csrftoken", requiresAuth: false, framework: "django" },
+  { pattern: "djangosessionid", requiresAuth: false, framework: "django" },
+
+  // Express/Node.js
+  { pattern: "connect.sid", requiresAuth: false, framework: "express" },
+  { pattern: "express", requiresAuth: false, framework: "express" },
+
+  // Rails
+  { pattern: "_session", requiresAuth: false, framework: "rails" },
+  { pattern: "rails_session", requiresAuth: false, framework: "rails" },
+
+  // PHP Generic
+  { pattern: "PHPSESSID", requiresAuth: false, framework: "php" },
+  { pattern: "session", requiresAuth: false, framework: "php" },
+  { pattern: "sess", requiresAuth: false, framework: "php" },
+];
+
+// WordPress-specific cookies (applied only when WordPress is detected)
+const WORDPRESS_SPECIFIC_COOKIES = [
   "woocommerce_",
   "wc_",
   "wp_woocommerce_session",
-  
-  // Popular WordPress Plugins
-  "edd_", // Easy Digital Downloads
+  "edd_",
   "memberpress_",
-  "wpsc_", // WP Shopping Cart
+  "wpsc_",
   "jevents_",
-  "bbp_", // bbPress
-  "bp-", // BuddyPress
+  "bbp_",
+  "bp-",
   "learndash_",
   "lifterlms_",
-  "wlm_", // WishList Member
+  "wlm_",
   "s2member_",
-  "pmpro_", // Paid Memberships Pro
-  "rcp_", // Restrict Content Pro
-  "arm_", // ARMember
-  "ihc_", // Ultimate Membership Pro
-  
-  // General Session Management
-  "PHPSESSID",
-  "session",
-  "sess",
-  "sid",
-  "sessionid",
-  "auth",
-  "token",
-  "user",
-  "userid",
-  "uid",
-  "login",
-  "jwt",
-  "bearer",
-  
-  // Laravel & Other Frameworks
-  "laravel_session",
-  "symfony",
-  "django",
-  "rails_session",
-  "express",
-  "connect.sid",
-  
-  // Shopping Carts & E-commerce
-  "cart",
-  "checkout",
-  "customer",
-  "order",
-  
-  // CRM & Marketing
-  "hubspot",
-  "salesforce",
-  "marketo",
-  
-  // Security & 2FA
-  "2fa",
-  "mfa",
-  "otp",
-  "verification"
+  "pmpro_",
+  "rcp_",
+  "arm_",
+  "ihc_",
+  "wp-",
 ];
 
-// cf-smart-cache-html-v2.js
+// cf-smart-cache-html-v2.js (v2.2 - Smart Site Detection)
 // Enhanced KV-based HTML edge caching for Cloudflare Workers
 // Features:
+// - Smart detection for WordPress vs non-WordPress sites (NEW in v2.2)
+// - Framework-aware cookie analysis to prevent 419 Page Expired errors (NEW in v2.2)
+// - Intelligent distinction between auth cookies and session/CSRF tokens (NEW in v2.2)
 // - Comprehensive security measures to prevent caching private content
 // - Stale-While-Revalidate support for optimal performance
 // - URL Pattern Bypass for admin/API endpoints
-// - Advanced cookie detection for session management
+// - Framework-aware cookie detection (Laravel, Django, WordPress, generic)
 // - Load balancing friendly with proper request handling
 // - RFC 7234 compliant cache behavior
 // - Support for Cloudflare-specific cache control headers
@@ -122,7 +121,7 @@ const BYPASS_URL_PATTERNS = [
   /\/account/,
   /\/my-account/,
   /\/user/,
-  /\/profile/
+  /\/profile/,
 ];
 
 // Stale-While-Revalidate window (in seconds)
@@ -135,15 +134,16 @@ const SERVE_STALE_WHILE_REVALIDATE = true; // Set to false to disable SWR and al
 const MAX_CACHE_TTL = 315360000;
 
 // Security: Headers that indicate private content
-const PRIVATE_CACHE_CONTROL_PATTERNS = /private|no-store|no-cache|must-revalidate/i;
+const PRIVATE_CACHE_CONTROL_PATTERNS =
+  /private|no-store|no-cache|must-revalidate/i;
 
 // Security: Request headers that indicate authentication/private content
 const AUTHENTICATION_HEADERS = [
-  'authorization',
-  'cookie',
-  'x-requested-with',
-  'x-csrf-token',
-  'x-xsrf-token'
+  "authorization",
+  "cookie",
+  "x-requested-with",
+  "x-csrf-token",
+  "x-xsrf-token",
 ];
 
 // Additional WordPress/CMS specific patterns to bypass
@@ -156,7 +156,7 @@ const WORDPRESS_PRIVATE_PATTERNS = [
   /\/\.well-known\//,
   /\/sitemap.*\.xml$/,
   /\/feed\/?$/,
-  /\/comments\/feed\/?$/
+  /\/comments\/feed\/?$/,
 ];
 
 // IMPORTANT: Either a Key/Value Namespace must be bound to this worker script
@@ -177,7 +177,7 @@ const RETRY_DELAY = 1000; // Base delay between retries (ms)
 // Enhanced error codes for better debugging
 const CACHE_STATUS = {
   HIT: "Hit",
-  MISS: "Miss", 
+  MISS: "Miss",
   BYPASS_URL: "Bypass URL Pattern",
   BYPASS_COOKIE: "Bypass Login Cookie",
   BYPASS_AUTH: "Bypass Authorization Header",
@@ -192,7 +192,7 @@ const CACHE_STATUS = {
   REVALIDATED: "Revalidated",
   CACHED: "Cached",
   PURGED: "Purged",
-  ERROR: "Error"
+  ERROR: "Error",
 };
 
 addEventListener("fetch", (event) => {
@@ -206,7 +206,7 @@ async function handleRequest(event) {
   // Security: Only process GET requests for HTML content
   const accept = request.headers.get("Accept");
   const isHTML = accept && accept.indexOf("text/html") >= 0;
-  
+
   // Early bypass for non-GET requests or non-HTML content
   if (request.method !== "GET" || !isHTML) {
     return fetch(request);
@@ -251,9 +251,20 @@ async function handleRequest(event) {
     let r = new Response(resp.body, resp);
     const debug = globalThis.__loginCookieDebug || {};
     r.headers.set("x-HTML-Edge-Cache-Status", CACHE_STATUS.BYPASS_COOKIE);
-    r.headers.set("x-Edge-Debug-Cookies", (debug.all || []).join(", "));
-    r.headers.set("x-Edge-Debug-Login-Match", (debug.matched || []).join(", "));
-    r.headers.set("x-HTML-Edge-Cache-Debug", `bypass=login-cookie;matched=${(debug.matched || []).join(",")}`);
+    r.headers.set("x-Edge-Debug-Site-Type", debug.siteType || "unknown");
+    r.headers.set("x-Edge-Debug-All-Cookies", (debug.all || []).join(", "));
+    r.headers.set("x-Edge-Debug-Auth-Cookies", (debug.auth || []).join(", "));
+    r.headers.set(
+      "x-Edge-Debug-Session-Cookies",
+      (debug.session || []).join(", ")
+    );
+    r.headers.set("x-Edge-Debug-Decision", debug.decision || "UNKNOWN");
+    r.headers.set(
+      "x-HTML-Edge-Cache-Debug",
+      `bypass=auth-cookie;site=${debug.siteType};auth=${(debug.auth || []).join(
+        ","
+      )}`
+    );
     return r;
   }
 
@@ -267,7 +278,7 @@ async function handleRequest(event) {
   let cachedResponse = await cache.match(cacheKeyRequest);
   let swrMetaKey = cacheKeyRequest.url + "::swr_meta";
   let swrMeta = undefined;
-  
+
   // Check cache and serve if valid
   if (cachedResponse) {
     // Try to get SWR metadata from KV (timestamp of last update)
@@ -277,7 +288,7 @@ async function handleRequest(event) {
     let now = Math.floor(Date.now() / 1000);
     let lastUpdate = swrMeta ? parseInt(swrMeta) : now;
     let age = now - lastUpdate;
-    
+
     if (age <= 0 || age < MAX_CACHE_TTL) {
       // If not stale (within max-age), serve as fresh
       cachedResponse = new Response(cachedResponse.body, cachedResponse);
@@ -299,7 +310,10 @@ async function handleRequest(event) {
         );
         cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
         cachedResponse.headers.set("x-Edge-Cache-SWR-Mode", "SWR");
-        cachedResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=stale-while-revalidate");
+        cachedResponse.headers.set(
+          "x-HTML-Edge-Cache-Debug",
+          "cache=stale-while-revalidate"
+        );
         event.waitUntil(
           revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event)
         );
@@ -312,10 +326,16 @@ async function handleRequest(event) {
           swrMetaKey,
           event
         );
-        freshResponse.headers.set("x-HTML-Edge-Cache-Status", CACHE_STATUS.REVALIDATED);
+        freshResponse.headers.set(
+          "x-HTML-Edge-Cache-Status",
+          CACHE_STATUS.REVALIDATED
+        );
         freshResponse.headers.set("x-Edge-Cache-Age", "0");
         freshResponse.headers.set("x-Edge-Cache-SWR-Mode", "No-SWR");
-        freshResponse.headers.set("x-HTML-Edge-Cache-Debug", "cache=revalidated");
+        freshResponse.headers.set(
+          "x-HTML-Edge-Cache-Debug",
+          "cache=revalidated"
+        );
         return freshResponse;
       }
     }
@@ -335,7 +355,7 @@ async function handleRequest(event) {
         cacheEverything: true,
       },
     });
-    
+
     // Security: Validate response before caching
     if (shouldCacheResponse(response, request)) {
       let safeResponse = createSafeResponse(response);
@@ -350,7 +370,7 @@ async function handleRequest(event) {
     }
     return response;
   }
-  
+
   // Helper: revalidate cache in background for SWR
   async function revalidateCache(
     request,
@@ -367,7 +387,7 @@ async function handleRequest(event) {
           cacheEverything: true,
         },
       });
-      
+
       // Security: Only cache if response is safe and valid
       if (shouldCacheResponse(response, request)) {
         let safeResponse = createSafeResponse(response);
@@ -381,7 +401,7 @@ async function handleRequest(event) {
       }
     } catch (e) {
       // Log errors in background revalidation for debugging
-      console.error('Background revalidation failed:', e);
+      console.error("Background revalidation failed:", e);
     }
   }
 
@@ -428,30 +448,37 @@ async function handleRequest(event) {
 async function fetchWithRetry(request, options = {}, retries = MAX_RETRIES) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ORIGIN_TIMEOUT);
-  
+
   try {
     const response = await fetch(request, {
       ...options,
-      signal: controller.signal
+      signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    
+
     // If response is not ok and we have retries left, retry
     if (!response.ok && retries > 0 && response.status >= 500) {
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1)));
+      await new Promise((resolve) =>
+        setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1))
+      );
       return fetchWithRetry(request, options, retries - 1);
     }
-    
+
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
-    
+
     // Retry on network errors if retries left
-    if (retries > 0 && (error.name === 'AbortError' || error.name === 'TypeError')) {
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1)));
+    if (
+      retries > 0 &&
+      (error.name === "AbortError" || error.name === "TypeError")
+    ) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1))
+      );
       return fetchWithRetry(request, options, retries - 1);
     }
-    
+
     throw error;
   }
 }
@@ -477,14 +504,14 @@ function normalizeRequestForCache(request) {
     "zanpid",
     "kw",
     "hash",
-    "ref"
+    "ref",
   ].forEach((param) => url.searchParams.delete(param));
   return new Request(url.toString(), request);
 }
 
 // Security: Check for Authorization header according to RFC 7234
 function hasAuthorizationHeader(request) {
-  return request.headers.has('authorization');
+  return request.headers.has("authorization");
 }
 
 // Security: Create forward request with proper headers
@@ -514,41 +541,46 @@ function createForwardRequest(request) {
 function shouldCacheResponse(response, request) {
   const accept = request.headers.get("Accept");
   const isHTML = accept && accept.indexOf("text/html") >= 0;
-  
+
   // Must be 200 OK and HTML content
   if (response.status !== 200 || !isHTML) {
     return false;
   }
-  
+
   // Security: Never cache responses with Set-Cookie header
   if (response.headers.has("Set-Cookie")) {
     return false;
   }
-  
+
   // Security: Respect Cache-Control directives
   const cacheControl = response.headers.get("Cache-Control");
   if (cacheControl && PRIVATE_CACHE_CONTROL_PATTERNS.test(cacheControl)) {
     return false;
   }
-  
+
   // Security: Check for CDN-Cache-Control (Cloudflare specific)
   const cdnCacheControl = response.headers.get("CDN-Cache-Control");
   if (cdnCacheControl && PRIVATE_CACHE_CONTROL_PATTERNS.test(cdnCacheControl)) {
     return false;
   }
-  
+
   // Security: Check for Cloudflare-CDN-Cache-Control
-  const cfCdnCacheControl = response.headers.get("Cloudflare-CDN-Cache-Control");
-  if (cfCdnCacheControl && PRIVATE_CACHE_CONTROL_PATTERNS.test(cfCdnCacheControl)) {
+  const cfCdnCacheControl = response.headers.get(
+    "Cloudflare-CDN-Cache-Control"
+  );
+  if (
+    cfCdnCacheControl &&
+    PRIVATE_CACHE_CONTROL_PATTERNS.test(cfCdnCacheControl)
+  ) {
     return false;
   }
-  
+
   // Security: Never cache responses with Vary: Cookie header
   const varyHeader = response.headers.get("Vary");
   if (varyHeader && varyHeader.toLowerCase().includes("cookie")) {
     return false;
   }
-  
+
   return true;
 }
 
@@ -556,70 +588,75 @@ function shouldCacheResponse(response, request) {
 function getCacheBypassReason(response, request) {
   const accept = request.headers.get("Accept");
   const isHTML = accept && accept.indexOf("text/html") >= 0;
-  
+
   if (response.status !== 200) {
     return {
       status: `Bypass Status Code: ${response.status}`,
-      debug: `bypass=status-${response.status}`
+      debug: `bypass=status-${response.status}`,
     };
   }
-  
+
   if (!isHTML) {
     return {
       status: "Bypass Content Type",
-      debug: "bypass=content-type"
+      debug: "bypass=content-type",
     };
   }
-  
+
   if (response.headers.has("Set-Cookie")) {
     return {
       status: "Bypass Set-Cookie Response",
-      debug: "bypass=set-cookie"
+      debug: "bypass=set-cookie",
     };
   }
-  
+
   const cacheControl = response.headers.get("Cache-Control");
   if (cacheControl && PRIVATE_CACHE_CONTROL_PATTERNS.test(cacheControl)) {
     return {
       status: "Bypass Cache-Control: " + cacheControl,
-      debug: "bypass=cache-control"
+      debug: "bypass=cache-control",
     };
   }
-  
+
   const cdnCacheControl = response.headers.get("CDN-Cache-Control");
   if (cdnCacheControl && PRIVATE_CACHE_CONTROL_PATTERNS.test(cdnCacheControl)) {
     return {
       status: "Bypass CDN-Cache-Control: " + cdnCacheControl,
-      debug: "bypass=cdn-cache-control"
+      debug: "bypass=cdn-cache-control",
     };
   }
-  
-  const cfCdnCacheControl = response.headers.get("Cloudflare-CDN-Cache-Control");
-  if (cfCdnCacheControl && PRIVATE_CACHE_CONTROL_PATTERNS.test(cfCdnCacheControl)) {
+
+  const cfCdnCacheControl = response.headers.get(
+    "Cloudflare-CDN-Cache-Control"
+  );
+  if (
+    cfCdnCacheControl &&
+    PRIVATE_CACHE_CONTROL_PATTERNS.test(cfCdnCacheControl)
+  ) {
     return {
       status: "Bypass Cloudflare-CDN-Cache-Control: " + cfCdnCacheControl,
-      debug: "bypass=cf-cdn-cache-control"
+      debug: "bypass=cf-cdn-cache-control",
     };
   }
-  
+
   const varyHeader = response.headers.get("Vary");
   if (varyHeader && varyHeader.toLowerCase().includes("cookie")) {
     return {
       status: "Bypass Vary: Cookie",
-      debug: "bypass=vary-cookie"
+      debug: "bypass=vary-cookie",
     };
   }
-  
+
   return {
     status: "Bypass Unknown Reason",
-    debug: "bypass=unknown"
+    debug: "bypass=unknown",
   };
 }
 
 // Security: Create safe response for caching (remove sensitive headers)
 function createSafeResponse(response) {
   let safeResponse = new Response(response.body, response);
-  
+
   // Security: Remove all potentially sensitive headers
   safeResponse.headers.delete("Set-Cookie");
   safeResponse.headers.delete("Set-Cookie2"); // Legacy header
@@ -627,21 +664,27 @@ function createSafeResponse(response) {
   safeResponse.headers.delete("WWW-Authenticate");
   safeResponse.headers.delete("Proxy-Authorization");
   safeResponse.headers.delete("Proxy-Authenticate");
-  
+
   // Respect origin's cache control but ensure public caching
   const originalCacheControl = response.headers.get("Cache-Control");
-  if (originalCacheControl && !PRIVATE_CACHE_CONTROL_PATTERNS.test(originalCacheControl)) {
+  if (
+    originalCacheControl &&
+    !PRIVATE_CACHE_CONTROL_PATTERNS.test(originalCacheControl)
+  ) {
     // Keep original cache control if it's safe
     safeResponse.headers.set("Cache-Control", originalCacheControl);
   } else {
     // Set safe default cache control
-    safeResponse.headers.set("Cache-Control", `public, max-age=${MAX_CACHE_TTL}`);
+    safeResponse.headers.set(
+      "Cache-Control",
+      `public, max-age=${MAX_CACHE_TTL}`
+    );
   }
-  
+
   // Add edge cache headers for debugging
   safeResponse.headers.set("x-Edge-Cache-Version", "v2.1");
   safeResponse.headers.set("x-Edge-Cache-Date", new Date().toISOString());
-  
+
   return safeResponse;
 }
 async function getCurrentCacheVersion() {
@@ -678,56 +721,195 @@ async function purgeCache() {
   }
 }
 
-// Security: Enhanced login/session cookie detection
-// Returns true if the request has any login/session/auth cookies (case-insensitive, substring match)
-function hasLoginCookie(request) {
+// Site detection and cookie intelligence
+function detectSiteType(request, response = null, content = null) {
+  const url = new URL(request.url);
+  const userAgent = request.headers.get("user-agent") || "";
+  const cookies = request.headers.get("cookie") || "";
+
+  // Check URL patterns first (most reliable)
+  if (
+    url.pathname.includes("/wp-") ||
+    url.pathname.includes("wp-content") ||
+    url.pathname.includes("wp-admin")
+  ) {
+    return "wordpress";
+  }
+
+  // Check cookies for framework indicators
+  if (cookies.includes("laravel_session") || cookies.includes("XSRF-TOKEN")) {
+    return "laravel";
+  }
+
+  if (cookies.includes("sessionid") && cookies.includes("csrftoken")) {
+    return "django";
+  }
+
+  if (cookies.includes("wordpress_") || cookies.includes("wp_")) {
+    return "wordpress";
+  }
+
+  // Check response headers if available
+  if (response) {
+    const serverHeader = response.headers.get("server") || "";
+    const poweredBy = response.headers.get("x-powered-by") || "";
+
+    if (
+      poweredBy.toLowerCase().includes("laravel") ||
+      serverHeader.toLowerCase().includes("laravel")
+    ) {
+      return "laravel";
+    }
+
+    if (
+      poweredBy.toLowerCase().includes("django") ||
+      serverHeader.toLowerCase().includes("django")
+    ) {
+      return "django";
+    }
+  }
+
+  // Check content for framework indicators if available (least reliable but helpful)
+  if (content && typeof content === "string") {
+    if (
+      content.includes("wp-content") ||
+      content.includes("wordpress") ||
+      content.includes("/wp/")
+    ) {
+      return "wordpress";
+    }
+
+    if (content.includes("laravel") || content.includes("Laravel")) {
+      return "laravel";
+    }
+
+    if (content.includes("django") || content.includes("Django")) {
+      return "django";
+    }
+  }
+
+  return "generic";
+}
+
+// Smart cookie analysis based on detected site type
+function analyzeSessionCookies(request, siteType) {
   const cookieHeader = request.headers.get("cookie");
-  if (!cookieHeader) return false;
-  
+  if (!cookieHeader) return { hasAuth: false, hasSession: false, details: [] };
+
   const cookies = cookieHeader.split(";");
-  let found = false;
-  let matched = [];
+  let hasAuth = false;
+  let hasSession = false;
+  let authCookies = [];
+  let sessionCookies = [];
   let allCookies = [];
-  
+
   for (let cookie of cookies) {
     const trimmedCookie = cookie.trim();
     if (!trimmedCookie) continue;
-    
+
     const name = trimmedCookie.split("=")[0].trim().toLowerCase();
+    const value = trimmedCookie.split("=")[1] || "";
     allCookies.push(name);
-    
-    // Check against known login cookie prefixes
-    for (let prefix of LOGIN_COOKIE_PREFIXES) {
-      if (name.includes(prefix.toLowerCase())) {
-        matched.push(name);
-        found = true;
+
+    // Site-specific cookie analysis
+    switch (siteType) {
+      case "wordpress":
+        // WordPress: Only treat actual login cookies as auth
+        if (
+          WORDPRESS_LOGIN_COOKIES.some((prefix) =>
+            name.includes(prefix.toLowerCase())
+          )
+        ) {
+          authCookies.push(name);
+          hasAuth = true;
+        }
+        // WordPress session cookies (don't indicate auth)
+        else if (
+          WORDPRESS_SPECIFIC_COOKIES.some((prefix) =>
+            name.includes(prefix.toLowerCase())
+          )
+        ) {
+          sessionCookies.push(name);
+          hasSession = true;
+        }
         break;
-      }
-    }
-    
-    // Additional security checks for common session patterns
-    if (!found) {
-      // Check for generic session patterns
-      if (name.match(/^(sess|session|sid|s|userid|uid|token|auth|login|user|jwt|bearer)(_|\.|-)?/i)) {
-        matched.push(name);
-        found = true;
-      }
-      
-      // Check for encrypted/hashed cookie names (often used for sessions)
-      if (name.length > 20 && name.match(/^[a-f0-9]{20,}$/i)) {
-        matched.push(name);
-        found = true;
-      }
+
+      case "laravel":
+        // Laravel: Distinguish between auth and CSRF/session tokens
+        if (name === "laravel_session" || name === "xsrf-token") {
+          // These are CSRF/session cookies, NOT auth cookies
+          sessionCookies.push(name);
+          hasSession = true;
+        } else if (
+          name.includes("remember_") ||
+          name.includes("login_") ||
+          name.includes("auth_")
+        ) {
+          authCookies.push(name);
+          hasAuth = true;
+        }
+        break;
+
+      case "django":
+        // Django: sessionid and csrftoken are NOT auth cookies
+        if (name === "sessionid" || name === "csrftoken") {
+          sessionCookies.push(name);
+          hasSession = true;
+        } else if (
+          name.includes("auth_user_id") ||
+          name.includes("django_auth")
+        ) {
+          authCookies.push(name);
+          hasAuth = true;
+        }
+        break;
+
+      default:
+        // Generic: Only universal auth patterns
+        if (
+          UNIVERSAL_AUTH_COOKIES.some((pattern) =>
+            name.includes(pattern.toLowerCase())
+          )
+        ) {
+          authCookies.push(name);
+          hasAuth = true;
+        }
+        // Generic session patterns (don't indicate auth)
+        else if (name.match(/^(phpsessid|session|sess|sid)$/i)) {
+          sessionCookies.push(name);
+          hasSession = true;
+        }
     }
   }
-  
+
+  return {
+    hasAuth,
+    hasSession,
+    siteType,
+    details: {
+      all: allCookies,
+      auth: authCookies,
+      session: sessionCookies,
+      total: allCookies.length,
+    },
+  };
+}
+
+// Security: Enhanced login/session cookie detection with site intelligence
+// Returns true ONLY if the request has actual authentication cookies (not just session/CSRF tokens)
+function hasLoginCookie(request) {
+  const siteType = detectSiteType(request);
+  const analysis = analyzeSessionCookies(request, siteType);
+
   // Attach debug info to globalThis for use in handleRequest
   globalThis.__loginCookieDebug = {
-    all: allCookies,
-    matched,
-    total: allCookies.length,
-    loginCookies: matched.length
+    siteType,
+    ...analysis.details,
+    hasAuth: analysis.hasAuth,
+    hasSession: analysis.hasSession,
+    decision: analysis.hasAuth ? "BYPASS" : "CACHE",
   };
-  
-  return found;
+
+  // Only bypass cache for actual authentication cookies, not session/CSRF tokens
+  return analysis.hasAuth;
 }
