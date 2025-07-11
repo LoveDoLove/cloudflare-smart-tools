@@ -19,8 +19,12 @@ const LOGIN_COOKIE_PREFIXES = [
   "jevents_",
   // Add your own hosting's login/session cookie names or prefixes here
 ];
+
 // cf-smart-cache-html-v2.js
-// KV-based HTML edge caching for Cloudflare Workers
+// KV-based HTML edge caching for Cloudflare Workers with Stale-While-Revalidate
+
+// Stale-While-Revalidate window (in seconds)
+const SWR_WINDOW = 30; // Serve stale cache for up to 30 seconds while revalidating
 
 // IMPORTANT: Either a Key/Value Namespace must be bound to this worker script
 // using the variable name SMART_CACHE, or the API parameters below should be configured.
@@ -47,17 +51,79 @@ async function handleRequest(event) {
     return fetch(request);
   }
 
+
   // Use versioned cache key
   const cacheVer = await getCurrentCacheVersion();
   const cacheKeyRequest = generateCacheRequest(request, cacheVer);
   let cache = caches.default;
   let cachedResponse = await cache.match(cacheKeyRequest);
+  let swrMetaKey = cacheKeyRequest.url + "::swr_meta";
+  let swrMeta = undefined;
   if (cachedResponse) {
-    // Clean up headers for the response
-    cachedResponse = new Response(cachedResponse.body, cachedResponse);
-    cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Hit");
-    return cachedResponse;
+    // Try to get SWR metadata from KV (timestamp of last update)
+    if (typeof SMART_CACHE !== "undefined") {
+      swrMeta = await SMART_CACHE.get(swrMetaKey);
+    }
+    let now = Math.floor(Date.now() / 1000);
+    let lastUpdate = swrMeta ? parseInt(swrMeta) : now;
+    let age = now - lastUpdate;
+    if (age <= 0 || age < 315360000) {
+      // If not stale (max-age=315360000), serve as fresh
+      cachedResponse = new Response(cachedResponse.body, cachedResponse);
+      cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Hit");
+      cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
+      return cachedResponse;
+    } else if (age <= SWR_WINDOW + 315360000) {
+      // If within SWR window, serve stale and revalidate in background
+      cachedResponse = new Response(cachedResponse.body, cachedResponse);
+      cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Stale-While-Revalidate");
+      cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
+      event.waitUntil(
+        revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event)
+      );
+      return cachedResponse;
+    }
+    // If outside SWR window, treat as miss (fetch new)
   }
+// Helper: revalidate cache in background for SWR
+async function revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event) {
+  try {
+    let forwardRequest = new Request(request.url, {
+      method: request.method,
+      headers: new Headers(request.headers),
+      body: request.body,
+      redirect: request.redirect,
+      credentials: request.credentials,
+      cache: request.cache,
+      referrer: request.referrer,
+      referrerPolicy: request.referrerPolicy,
+      integrity: request.integrity,
+      keepalive: request.keepalive,
+      mode: request.mode,
+      signal: request.signal,
+      duplex: request.duplex,
+    });
+    forwardRequest.headers.set(
+      "x-HTML-Edge-Cache",
+      "supports=cache|purgeall|bypass-cookies"
+    );
+    let response = await fetch(forwardRequest);
+    // Only cache if response is 200 and HTML
+    const accept = request.headers.get("Accept");
+    const isHTML = accept && accept.indexOf("text/html") >= 0;
+    if (response.status === 200 && isHTML) {
+      let safeResponse = new Response(response.body, response);
+      safeResponse.headers.delete("Set-Cookie");
+      safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
+      if (typeof SMART_CACHE !== "undefined") {
+        await SMART_CACHE.put(swrMetaKey, Math.floor(Date.now() / 1000).toString());
+      }
+      await caches.default.put(cacheKeyRequest, safeResponse.clone());
+    }
+  } catch (e) {
+    // Ignore errors in background revalidation
+  }
+}
 
   // Forward request to origin, preserving all properties (including credentials/cookies)
   let forwardRequest = new Request(request.url, {
@@ -151,6 +217,9 @@ async function handleRequest(event) {
   safeResponse.headers.delete("Set-Cookie");
   safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
   safeResponse.headers.set("x-HTML-Edge-Cache-Status", "Cached");
+  if (typeof SMART_CACHE !== "undefined") {
+    await SMART_CACHE.put(swrMetaKey, Math.floor(Date.now() / 1000).toString());
+  }
   event.waitUntil(cache.put(cacheKeyRequest, safeResponse.clone()));
   return safeResponse;
 }
