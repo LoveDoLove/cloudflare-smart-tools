@@ -91,8 +91,19 @@ async function handleRequest(event) {
       return r;
     }
   }
+  // Only cache GET HTML requests
   if (request.method !== "GET" || !isHTML) {
     return fetch(request);
+  }
+  // If the request has login/session/auth cookies, NEVER cache or serve from cache
+  if (hasLoginCookie(request)) {
+    let resp = await fetch(request);
+    let r = new Response(resp.body, resp);
+    const debug = globalThis.__loginCookieDebug || {};
+    r.headers.set("x-HTML-Edge-Cache-Status", "Bypass Login Cookie");
+    r.headers.set("x-Edge-Debug-Cookies", (debug.all || []).join(", "));
+    r.headers.set("x-Edge-Debug-Login-Match", (debug.matched || []).join(", "));
+    return r;
   }
 
   // Use versioned cache key
@@ -102,6 +113,7 @@ async function handleRequest(event) {
   let cachedResponse = await cache.match(cacheKeyRequest);
   let swrMetaKey = cacheKeyRequest.url + "::swr_meta";
   let swrMeta = undefined;
+  // Only serve from cache if the request is anonymous (no login cookie)
   if (cachedResponse) {
     // Try to get SWR metadata from KV (timestamp of last update)
     if (typeof SMART_CACHE !== "undefined") {
@@ -274,42 +286,7 @@ async function handleRequest(event) {
     return response;
   }
 
-  // Bypass caching if request has login/session cookies (WordPress, WooCommerce, PHPSESSID, etc.)
-  if (hasLoginCookie(request)) {
-    response = new Response(response.body, response);
-    // Add debug headers for troubleshooting
-    const debug = globalThis.__loginCookieDebug || {};
-    response.headers.set("x-HTML-Edge-Cache-Status", "Bypass Login Cookie");
-    response.headers.set("x-Edge-Debug-Cookies", (debug.all || []).join(", "));
-    response.headers.set(
-      "x-Edge-Debug-Login-Match",
-      (debug.matched || []).join(", ")
-    );
-    return response;
-  }
-  // Returns true if the request has any login/session/auth cookies (case-insensitive, substring match)
-  function hasLoginCookie(request) {
-    const cookieHeader = request.headers.get("cookie");
-    if (!cookieHeader) return false;
-    const cookies = cookieHeader.split(";");
-    let found = false;
-    let matched = [];
-    for (let cookie of cookies) {
-      const name = cookie.split("=")[0].trim().toLowerCase();
-      for (let prefix of LOGIN_COOKIE_PREFIXES) {
-        if (name.includes(prefix.toLowerCase())) {
-          matched.push(name);
-          found = true;
-        }
-      }
-    }
-    // Attach debug info to globalThis for use in handleRequest
-    globalThis.__loginCookieDebug = {
-      all: cookies.map((c) => c.split("=")[0].trim()),
-      matched,
-    };
-    return found;
-  }
+  // If the response is not 200 or not HTML, do not cache
   if (response.status !== 200 || !isHTML) {
     response = new Response(response.body, response);
     response.headers.set(
@@ -319,7 +296,17 @@ async function handleRequest(event) {
     return response;
   }
 
-  // Bypass if response has Cache-Control: private or no-store
+  // If the response has Set-Cookie, do not cache
+  if (response.headers.has("Set-Cookie")) {
+    response = new Response(response.body, response);
+    response.headers.set(
+      "x-HTML-Edge-Cache-Status",
+      "Bypass Set-Cookie Response"
+    );
+    return response;
+  }
+
+  // If the response has Cache-Control: private|no-store|no-cache, do not cache
   const cacheControl = response.headers.get("Cache-Control");
   if (cacheControl && /private|no-store|no-cache/i.test(cacheControl)) {
     response = new Response(response.body, response);
@@ -375,4 +362,28 @@ async function purgeCache() {
     cacheVer++;
     await SMART_CACHE.put("html_cache_version", cacheVer.toString());
   }
+}
+
+// Returns true if the request has any login/session/auth cookies (case-insensitive, substring match)
+function hasLoginCookie(request) {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return false;
+  const cookies = cookieHeader.split(";");
+  let found = false;
+  let matched = [];
+  for (let cookie of cookies) {
+    const name = cookie.split("=")[0].trim().toLowerCase();
+    for (let prefix of LOGIN_COOKIE_PREFIXES) {
+      if (name.includes(prefix.toLowerCase())) {
+        matched.push(name);
+        found = true;
+      }
+    }
+  }
+  // Attach debug info to globalThis for use in handleRequest
+  globalThis.__loginCookieDebug = {
+    all: cookies.map((c) => c.split("=")[0].trim()),
+    matched,
+  };
+  return found;
 }
