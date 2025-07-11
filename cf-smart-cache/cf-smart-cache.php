@@ -281,6 +281,7 @@ function cf_smart_cache_set_edge_headers()
         cf_smart_cache_log('Edge caching disabled for admin/login page');
         return;
     }
+
     // REST API and AJAX endpoints: always no-cache
     if (defined('DOING_AJAX') && DOING_AJAX) {
         cf_smart_cache_add_security_headers();
@@ -304,6 +305,44 @@ function cf_smart_cache_set_edge_headers()
         header('x-HTML-Edge-Cache-Plugin: active');
         header('x-HTML-Edge-Cache-Debug: bypass=rest');
         cf_smart_cache_log('Edge caching disabled for REST API request');
+        return;
+    }
+
+    // Don't cache preview, password-protected, or WooCommerce cart/checkout/account pages
+    if (function_exists('is_preview') && is_preview()) {
+        cf_smart_cache_add_security_headers();
+        header('Cache-Control: private, no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Set-Cookie: cf_smart_cache_preview=1; Path=/; HttpOnly; Secure; SameSite=Lax');
+        header('x-HTML-Edge-Cache: nocache');
+        header('x-HTML-Edge-Cache-Plugin: active');
+        header('x-HTML-Edge-Cache-Debug: bypass=preview');
+        cf_smart_cache_log('Edge caching disabled for preview page');
+        return;
+    }
+    if (function_exists('post_password_required') && post_password_required()) {
+        cf_smart_cache_add_security_headers();
+        header('Cache-Control: private, no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Set-Cookie: cf_smart_cache_password=1; Path=/; HttpOnly; Secure; SameSite=Lax');
+        header('x-HTML-Edge-Cache: nocache');
+        header('x-HTML-Edge-Cache-Plugin: active');
+        header('x-HTML-Edge-Cache-Debug: bypass=password');
+        cf_smart_cache_log('Edge caching disabled for password-protected post');
+        return;
+    }
+    if ((function_exists('is_cart') && is_cart()) || (function_exists('is_checkout') && is_checkout()) || (function_exists('is_account_page') && is_account_page())) {
+        cf_smart_cache_add_security_headers();
+        header('Cache-Control: private, no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Set-Cookie: cf_smart_cache_woo=1; Path=/; HttpOnly; Secure; SameSite=Lax');
+        header('x-HTML-Edge-Cache: nocache');
+        header('x-HTML-Edge-Cache-Plugin: active');
+        header('x-HTML-Edge-Cache-Debug: bypass=woocommerce');
+        cf_smart_cache_log('Edge caching disabled for WooCommerce cart/checkout/account page');
         return;
     }
 
@@ -510,6 +549,13 @@ function cf_smart_cache_sanitize_settings($input)
         $sanitized['cf_smart_cache_bypass_cookies'] = implode(',', $arr);
     }
 
+    /**
+     * Fires after plugin settings are sanitized and saved.
+     *
+     * @param array $sanitized The sanitized settings array.
+     * @param array $raw The raw input array.
+     */
+    do_action('cf_smart_cache_after_settings_save', $sanitized, $input);
     return $sanitized;
 }
 
@@ -801,6 +847,12 @@ function cf_smart_cache_purge_all_cache()
     } else {
         $message = 'Success: All cache purged from Cloudflare.';
         cf_smart_cache_log('Manual purge all cache executed');
+        /**
+         * Fires after a successful full cache purge via the admin UI.
+         *
+         * @param array $response The Cloudflare API response.
+         */
+        do_action('cf_smart_cache_after_purge_all', $validated_response);
     }
 
     set_transient('cf_smart_cache_notice_' . get_current_user_id(), $message, 45);
@@ -921,6 +973,15 @@ function cf_smart_cache_batch_purge($urls_to_purge)
         ]);
         $validated = cf_smart_cache_validate_api_response($response, 'batch purge');
         $results[] = $validated;
+        if (!is_wp_error($validated)) {
+            /**
+             * Fires after a successful batch cache purge.
+             *
+             * @param array $purged_urls The URLs that were purged.
+             * @param array $response The Cloudflare API response.
+             */
+            do_action('cf_smart_cache_after_batch_purge', $chunk, $validated);
+        }
         // Optional: add delay to avoid rate limits
         sleep(1);
     }
