@@ -84,7 +84,7 @@ async function handleRequest(event) {
   // URL pattern bypass
   for (let pattern of BYPASS_URL_PATTERNS) {
     if (pattern.test(url.pathname)) {
-      let resp = await fetch(request);
+      let resp = await fetch(request, { cache: "no-store" });
       let r = new Response(resp.body, resp);
       r.headers.set("x-HTML-Edge-Cache-Status", "Bypass URL Pattern");
       r.headers.set("x-Edge-Bypass-Pattern", pattern.toString());
@@ -93,11 +93,11 @@ async function handleRequest(event) {
   }
   // Only cache GET HTML requests
   if (request.method !== "GET" || !isHTML) {
-    return fetch(request);
+    return fetch(request, { cache: "no-store" });
   }
   // If the request has login/session/auth cookies, NEVER cache or serve from cache
   if (hasLoginCookie(request)) {
-    let resp = await fetch(request);
+    let resp = await fetch(request, { cache: "no-store" });
     let r = new Response(resp.body, resp);
     const debug = globalThis.__loginCookieDebug || {};
     r.headers.set("x-HTML-Edge-Cache-Status", "Bypass Login Cookie");
@@ -108,7 +108,10 @@ async function handleRequest(event) {
 
   // Use versioned cache key
   const cacheVer = await getCurrentCacheVersion();
-  const cacheKeyRequest = generateCacheRequest(request, cacheVer);
+  const cacheKeyRequest = generateCacheRequest(
+    normalizeRequestForCache(request),
+    cacheVer
+  );
   let cache = caches.default;
   let cachedResponse = await cache.match(cacheKeyRequest);
   let swrMetaKey = cacheKeyRequest.url + "::swr_meta";
@@ -188,7 +191,12 @@ async function handleRequest(event) {
       "x-HTML-Edge-Cache",
       "supports=cache|purgeall|bypass-cookies"
     );
-    let response = await fetch(forwardRequest);
+    let response = await fetch(forwardRequest, {
+      cf: {
+        cacheTtl: 3600,
+        cacheEverything: true,
+      },
+    });
     const accept = request.headers.get("Accept");
     const isHTML = accept && accept.indexOf("text/html") >= 0;
     if (response.status === 200 && isHTML) {
@@ -234,7 +242,12 @@ async function handleRequest(event) {
         "x-HTML-Edge-Cache",
         "supports=cache|purgeall|bypass-cookies"
       );
-      let response = await fetch(forwardRequest);
+      let response = await fetch(forwardRequest, {
+        cf: {
+          cacheTtl: 3600,
+          cacheEverything: true,
+        },
+      });
       // Only cache if response is 200 and HTML
       const accept = request.headers.get("Accept");
       const isHTML = accept && accept.indexOf("text/html") >= 0;
@@ -275,7 +288,29 @@ async function handleRequest(event) {
     "x-HTML-Edge-Cache",
     "supports=cache|purgeall|bypass-cookies"
   );
-  let response = await fetch(forwardRequest);
+  let response = await fetch(forwardRequest, {
+    cf: {
+      cacheTtl: 3600,
+      cacheEverything: true,
+    },
+  });
+  // Normalize request for cache key (strip tracking params)
+  function normalizeRequestForCache(request) {
+    let url = new URL(request.url);
+    // Remove common tracking/query params
+    [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "fbclid",
+      "gclid",
+      "_ga",
+      "_gid",
+    ].forEach((param) => url.searchParams.delete(param));
+    return new Request(url.toString(), request);
+  }
 
   // Purge logic: if origin signals purge, bump version
   const edgeCacheHeader = response.headers.get("x-HTML-Edge-Cache");
