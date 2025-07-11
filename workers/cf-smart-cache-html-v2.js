@@ -23,8 +23,12 @@ const LOGIN_COOKIE_PREFIXES = [
 // cf-smart-cache-html-v2.js
 // KV-based HTML edge caching for Cloudflare Workers with Stale-While-Revalidate
 
+
 // Stale-While-Revalidate window (in seconds)
 const SWR_WINDOW = 30; // Serve stale cache for up to 30 seconds while revalidating
+
+// Config: If false, do NOT serve stale content while updating (matches Cloudflare dashboard option)
+const SERVE_STALE_WHILE_REVALIDATE = true; // Set to false to disable SWR and always wait for fresh
 
 // IMPORTANT: Either a Key/Value Namespace must be bound to this worker script
 // using the variable name SMART_CACHE, or the API parameters below should be configured.
@@ -72,19 +76,66 @@ async function handleRequest(event) {
       cachedResponse = new Response(cachedResponse.body, cachedResponse);
       cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Hit");
       cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
+      cachedResponse.headers.set("x-Edge-Cache-SWR-Mode", SERVE_STALE_WHILE_REVALIDATE ? "SWR" : "No-SWR");
       return cachedResponse;
     } else if (age <= SWR_WINDOW + 315360000) {
-      // If within SWR window, serve stale and revalidate in background
-      cachedResponse = new Response(cachedResponse.body, cachedResponse);
-      cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Stale-While-Revalidate");
-      cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
-      event.waitUntil(
-        revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event)
-      );
-      return cachedResponse;
+      if (SERVE_STALE_WHILE_REVALIDATE) {
+        // Serve stale and revalidate in background
+        cachedResponse = new Response(cachedResponse.body, cachedResponse);
+        cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Stale-While-Revalidate");
+        cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
+        cachedResponse.headers.set("x-Edge-Cache-SWR-Mode", "SWR");
+        event.waitUntil(
+          revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event)
+        );
+        return cachedResponse;
+      } else {
+        // Do NOT serve stale, wait for fresh (block until revalidated)
+        let freshResponse = await fetchAndCacheFresh(request, cacheKeyRequest, swrMetaKey, event);
+        freshResponse.headers.set("x-HTML-Edge-Cache-Status", "Revalidated");
+        freshResponse.headers.set("x-Edge-Cache-Age", "0");
+        freshResponse.headers.set("x-Edge-Cache-SWR-Mode", "No-SWR");
+        return freshResponse;
+      }
     }
     // If outside SWR window, treat as miss (fetch new)
   }
+// Helper: fetch and cache fresh content synchronously (for No-SWR mode)
+async function fetchAndCacheFresh(request, cacheKeyRequest, swrMetaKey, event) {
+  let forwardRequest = new Request(request.url, {
+    method: request.method,
+    headers: new Headers(request.headers),
+    body: request.body,
+    redirect: request.redirect,
+    credentials: request.credentials,
+    cache: request.cache,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    integrity: request.integrity,
+    keepalive: request.keepalive,
+    mode: request.mode,
+    signal: request.signal,
+    duplex: request.duplex,
+  });
+  forwardRequest.headers.set(
+    "x-HTML-Edge-Cache",
+    "supports=cache|purgeall|bypass-cookies"
+  );
+  let response = await fetch(forwardRequest);
+  const accept = request.headers.get("Accept");
+  const isHTML = accept && accept.indexOf("text/html") >= 0;
+  if (response.status === 200 && isHTML) {
+    let safeResponse = new Response(response.body, response);
+    safeResponse.headers.delete("Set-Cookie");
+    safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
+    if (typeof SMART_CACHE !== "undefined") {
+      await SMART_CACHE.put(swrMetaKey, Math.floor(Date.now() / 1000).toString());
+    }
+    await caches.default.put(cacheKeyRequest, safeResponse.clone());
+    return safeResponse;
+  }
+  return response;
+}
 // Helper: revalidate cache in background for SWR
 async function revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event) {
   try {
