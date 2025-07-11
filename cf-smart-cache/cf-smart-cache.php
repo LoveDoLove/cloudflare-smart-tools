@@ -26,23 +26,23 @@ defined('ABSPATH') or die('No script kiddies please!');
 /**
  * Plugin activation hook
  */
-function cf_smart_cache_activate() 
+function cf_smart_cache_activate()
 {
     // Set default options if they don't exist
     if (!get_option('cf_smart_cache_settings')) {
         $default_settings = [
-            'cf_smart_cache_api_token' => '',
-            'cf_smart_cache_email' => '',
+            'cf_smart_cache_api_token'      => '',
+            'cf_smart_cache_email'          => '',
             'cf_smart_cache_global_api_key' => '',
-            'cf_smart_cache_zone_id' => ''
+            'cf_smart_cache_zone_id'        => ''
         ];
         add_option('cf_smart_cache_settings', $default_settings);
     }
-    
+
     // Clear any existing transients
     delete_transient('cf_smart_cache_zone_list');
     delete_transient('cf_smart_cache_rate_limit');
-    
+
     cf_smart_cache_log('Plugin activated');
 }
 register_activation_hook(__FILE__, 'cf_smart_cache_activate');
@@ -50,12 +50,12 @@ register_activation_hook(__FILE__, 'cf_smart_cache_activate');
 /**
  * Plugin deactivation hook
  */
-function cf_smart_cache_deactivate() 
+function cf_smart_cache_deactivate()
 {
     // Clear transients
     delete_transient('cf_smart_cache_zone_list');
     delete_transient('cf_smart_cache_rate_limit');
-    
+
     // Clear any pending admin notices
     global $wpdb;
     $wpdb->query(
@@ -63,7 +63,7 @@ function cf_smart_cache_deactivate()
          WHERE option_name LIKE '_transient_cf_smart_cache_notice_%' 
          OR option_name LIKE '_transient_timeout_cf_smart_cache_notice_%'"
     );
-    
+
     cf_smart_cache_log('Plugin deactivated');
 }
 register_deactivation_hook(__FILE__, 'cf_smart_cache_deactivate');
@@ -85,7 +85,7 @@ add_action('activated_plugin', function ($plugin)
 /**
  * Log CF Smart Cache events for debugging
  */
-function cf_smart_cache_log($message, $level = 'info') 
+function cf_smart_cache_log($message, $level = 'info')
 {
     if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
         error_log(sprintf('[CF Smart Cache] [%s] %s', strtoupper($level), $message));
@@ -102,10 +102,10 @@ function cf_smart_cache_validate_api_response($response, $operation = 'API call'
         cf_smart_cache_log($error_message, 'error');
         return new WP_Error('http_error', $error_message);
     }
-    
-    $response_code = wp_remote_retrieve_response_code($response);
+
+    $response_code    = wp_remote_retrieve_response_code($response);
     $response_message = wp_remote_retrieve_response_message($response);
-    
+
     // Handle different HTTP status codes appropriately
     switch ($response_code) {
         case 200:
@@ -139,20 +139,20 @@ function cf_smart_cache_validate_api_response($response, $operation = 'API call'
             cf_smart_cache_log($error_message, 'error');
             return new WP_Error('http_error', $error_message);
     }
-    
+
     $body = json_decode(wp_remote_retrieve_body($response), true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         $error_message = sprintf('JSON decode error during %s: %s', $operation, json_last_error_msg());
         cf_smart_cache_log($error_message, 'error');
         return new WP_Error('json_error', $error_message);
     }
-    
+
     if (!isset($body['success'])) {
         $error_message = sprintf('Invalid API response format during %s: Missing success field', $operation);
         cf_smart_cache_log($error_message, 'error');
         return new WP_Error('invalid_response', $error_message);
     }
-    
+
     if (!$body['success']) {
         $error_details = '';
         if (isset($body['errors']) && is_array($body['errors']) && !empty($body['errors'])) {
@@ -163,11 +163,11 @@ function cf_smart_cache_validate_api_response($response, $operation = 'API call'
         } else {
             $error_details = 'Unknown Cloudflare API error';
         }
-        
+
         cf_smart_cache_log(sprintf('Cloudflare API error during %s: %s', $operation, $error_details), 'error');
         return new WP_Error('cf_api_error', $error_details);
     }
-    
+
     return $body;
 }
 
@@ -222,52 +222,91 @@ function cf_smart_cache_set_edge_headers()
     // Don't cache if user is logged in
     if (is_user_logged_in()) {
         cf_smart_cache_add_security_headers();
+        if (function_exists('nocache_headers')) {
+            nocache_headers();
+        } else {
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+        }
         header('x-HTML-Edge-Cache: nocache');
-        header('Cache-Control: no-cache, no-store, must-revalidate');
-        header('Pragma: no-cache');
-        header('Expires: 0');
+        header('x-HTML-Edge-Cache-Plugin: active');
         cf_smart_cache_log('Edge caching disabled for logged-in user');
         return;
     }
-    
+
     // Don't cache admin, login, or WordPress core pages
     if (is_admin() || $GLOBALS['pagenow'] === 'wp-login.php') {
         cf_smart_cache_add_security_headers();
+        if (function_exists('nocache_headers')) {
+            nocache_headers();
+        } else {
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+        }
         header('x-HTML-Edge-Cache: nocache');
-        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('x-HTML-Edge-Cache-Plugin: active');
+        cf_smart_cache_log('Edge caching disabled for admin/login page');
         return;
     }
-    
-    /**
-     * The bypass cookie list below MUST match the LOGIN_COOKIE_PREFIXES in cf-smart-cache-html-v2.js.
-     * If you update one, update the other to keep origin and edge logic in sync for security.
-     */
-    $bypass_cookies = apply_filters('cf_smart_cache_bypass_cookies', [
-        'wordpress_logged_in',
-        'wp-',
-        'wordpress_sec',
-        'woocommerce_',
-        'PHPSESSID',
-        'session',
-        'auth',
-        'token',
-        'user',
-        'wordpress',
-        'comment_',
-        'wp_postpass',
-        'edd_',
-        'memberpress_',
-        'wpsc_',
-        'wc_',
-        'jevents_'
-    ]);
+    // REST API and AJAX endpoints: always no-cache
+    if (defined('DOING_AJAX') && DOING_AJAX) {
+        cf_smart_cache_add_security_headers();
+        if (function_exists('nocache_headers')) {
+            nocache_headers();
+        } else {
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+        }
+        header('x-HTML-Edge-Cache: nocache');
+        header('x-HTML-Edge-Cache-Plugin: active');
+        cf_smart_cache_log('Edge caching disabled for AJAX request');
+        return;
+    }
+    if (defined('REST_REQUEST') && REST_REQUEST) {
+        cf_smart_cache_add_security_headers();
+        if (function_exists('nocache_headers')) {
+            nocache_headers();
+        } else {
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+        }
+        header('x-HTML-Edge-Cache: nocache');
+        header('x-HTML-Edge-Cache-Plugin: active');
+        cf_smart_cache_log('Edge caching disabled for REST API request');
+        return;
+    }
 
-    $bypass_string = implode('|', $bypass_cookies);
+    $settings       = get_option('cf_smart_cache_settings');
+    $bypass_cookies = isset($settings['cf_smart_cache_bypass_cookies']) && strlen($settings['cf_smart_cache_bypass_cookies']) > 0
+        ? array_map('trim', explode(',', $settings['cf_smart_cache_bypass_cookies']))
+        : [
+            'wordpress_logged_in',
+            'wp-',
+            'wordpress_sec',
+            'woocommerce_',
+            'PHPSESSID',
+            'session',
+            'auth',
+            'token',
+            'user',
+            'wordpress',
+            'comment_',
+            'wp_postpass',
+            'edd_',
+            'memberpress_',
+            'wpsc_',
+            'wc_',
+            'jevents_'
+        ];
+    $bypass_string  = implode('|', $bypass_cookies);
 
     // Add security headers for cached pages
     cf_smart_cache_add_security_headers();
-
-    // Add plugin debug header for transparency
+    // Add plugin debug header for transparency (always set)
     header('x-HTML-Edge-Cache-Plugin: active');
 
     // Set appropriate cache headers based on page type
@@ -297,7 +336,7 @@ function cf_smart_cache_add_security_headers()
         header('X-Frame-Options: SAMEORIGIN');
         header('X-XSS-Protection: 1; mode=block');
         header('Referrer-Policy: strict-origin-when-cross-origin');
-        
+
         // Only add HSTS if we're on HTTPS
         if (is_ssl()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
@@ -354,6 +393,9 @@ function cf_smart_cache_settings_init()
     add_settings_field('cf_smart_cache_email', 'Cloudflare Account Email (Legacy)', 'cf_smart_cache_email_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
     add_settings_field('cf_smart_cache_global_api_key', 'Global API Key (Legacy)', 'cf_smart_cache_global_api_key_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
     add_settings_field('cf_smart_cache_zone_id', 'Zone', 'cf_smart_cache_zone_id_render', 'cf_smart_cache', 'cf_smart_cache_api_section');
+    // Add bypass cookie list setting
+    add_settings_section('cf_smart_cache_bypass_section', 'Cache Bypass Cookie Prefixes', null, 'cf_smart_cache');
+    add_settings_field('cf_smart_cache_bypass_cookies', 'Bypass Cookie Prefixes (comma-separated)', 'cf_smart_cache_bypass_cookies_render', 'cf_smart_cache', 'cf_smart_cache_bypass_section');
 }
 
 /**
@@ -362,27 +404,33 @@ function cf_smart_cache_settings_init()
 function cf_smart_cache_sanitize_settings($input)
 {
     $sanitized = [];
-    
+
     // Sanitize API token
     if (isset($input['cf_smart_cache_api_token'])) {
         $sanitized['cf_smart_cache_api_token'] = sanitize_text_field($input['cf_smart_cache_api_token']);
     }
-    
+
     // Sanitize email
     if (isset($input['cf_smart_cache_email'])) {
         $sanitized['cf_smart_cache_email'] = sanitize_email($input['cf_smart_cache_email']);
     }
-    
+
     // Sanitize API key
     if (isset($input['cf_smart_cache_global_api_key'])) {
         $sanitized['cf_smart_cache_global_api_key'] = sanitize_text_field($input['cf_smart_cache_global_api_key']);
     }
-    
+
     // Sanitize zone ID
     if (isset($input['cf_smart_cache_zone_id'])) {
         $sanitized['cf_smart_cache_zone_id'] = sanitize_text_field($input['cf_smart_cache_zone_id']);
     }
-    
+    // Sanitize bypass cookie list
+    if (isset($input['cf_smart_cache_bypass_cookies'])) {
+        $raw                                        = $input['cf_smart_cache_bypass_cookies'];
+        $arr                                        = array_filter(array_map('trim', explode(',', $raw)));
+        $sanitized['cf_smart_cache_bypass_cookies'] = implode(',', $arr);
+    }
+
     return $sanitized;
 }
 
@@ -394,17 +442,17 @@ function cf_smart_cache_fetch_zones()
     if (false !== $cached_zones) {
         return $cached_zones;
     }
-    
-    $settings = get_option('cf_smart_cache_settings');
+
+    $settings  = get_option('cf_smart_cache_settings');
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
     $email     = $settings['cf_smart_cache_email'] ?? '';
     $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
-    
+
     // Determine authentication method - prefer API token
     if (!empty($api_token)) {
         $headers = [
             'Authorization' => 'Bearer ' . $api_token,
-            'Content-Type' => 'application/json'
+            'Content-Type'  => 'application/json'
         ];
         cf_smart_cache_log('Using API token authentication for zone fetching');
     } elseif (!empty($email) && !empty($api_key)) {
@@ -418,9 +466,9 @@ function cf_smart_cache_fetch_zones()
         cf_smart_cache_log('No valid API credentials provided', 'error');
         return new WP_Error('missing_creds', 'API credentials not set. Please provide either an API token or email + API key.');
     }
-    
+
     $retry_attempts = 3;
-    $response = null;
+    $response       = null;
 
     for ($i = 0; $i < $retry_attempts; $i++) {
         $response = wp_remote_get('https://api.cloudflare.com/client/v4/zones', [
@@ -493,21 +541,29 @@ function cf_smart_cache_zone_id_render()
     $refresh_url = wp_nonce_url(menu_page_url('cf_smart_cache', false) . '&refresh_zones=true', 'cf-smart-cache-refresh-zones');
     echo " <a href='" . esc_url($refresh_url) . "'>Refresh List</a>";
 }
+// Render bypass cookie list field
+function cf_smart_cache_bypass_cookies_render()
+{
+    $options = get_option('cf_smart_cache_settings');
+    $val     = isset($options['cf_smart_cache_bypass_cookies']) ? esc_attr($options['cf_smart_cache_bypass_cookies']) : '';
+    echo "<input type='text' name='cf_smart_cache_settings[cf_smart_cache_bypass_cookies]' value='{$val}' class='regular-text'>";
+    echo "<p class='description'>Comma-separated list of cookie name prefixes that will trigger cache bypass. <strong>This list must match the Worker configuration.</strong></p>";
+}
 function cf_smart_cache_options_page_html()
 {
     // Handle manual purge actions
     if (isset($_POST['cf_smart_cache_purge_all']) && check_admin_referer('cf-smart-cache-purge-all')) {
         cf_smart_cache_purge_all_cache();
     }
-    
+
     if (isset($_POST['cf_smart_cache_purge_home']) && check_admin_referer('cf-smart-cache-purge-home')) {
         cf_smart_cache_batch_purge([home_url('/')]);
     }
-    
+
     ?>
     <div class="wrap">
         <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-        
+
         <!-- API Configuration -->
         <form action='options.php' method='post'>
             <?php
@@ -516,28 +572,27 @@ function cf_smart_cache_options_page_html()
             submit_button('Save Settings');
             ?>
         </form>
-        
+
         <hr>
-        
+
         <!-- Manual Cache Controls -->
         <h2>Manual Cache Controls</h2>
         <div class="cf-cache-controls">
             <form method="post" style="display: inline-block; margin-right: 10px;">
                 <?php wp_nonce_field('cf-smart-cache-purge-all'); ?>
-                <input type="submit" name="cf_smart_cache_purge_all" class="button button-secondary" 
-                       value="Purge All Cache" 
-                       onclick="return confirm('Are you sure you want to purge all cached content?');">
+                <input type="submit" name="cf_smart_cache_purge_all" class="button button-secondary" value="Purge All Cache"
+                    onclick="return confirm('Are you sure you want to purge all cached content?');">
             </form>
-            
+
             <form method="post" style="display: inline-block;">
                 <?php wp_nonce_field('cf-smart-cache-purge-home'); ?>
-                <input type="submit" name="cf_smart_cache_purge_home" class="button button-secondary" 
-                       value="Purge Homepage">
+                <input type="submit" name="cf_smart_cache_purge_home" class="button button-secondary"
+                    value="Purge Homepage">
             </form>
         </div>
-        
+
         <hr>
-        
+
         <!-- Cache Status and Statistics -->
         <h2>Cache Status</h2>
         <?php cf_smart_cache_display_cache_status(); ?>
@@ -550,17 +605,17 @@ function cf_smart_cache_options_page_html()
  */
 function cf_smart_cache_purge_all_cache()
 {
-    $settings = get_option('cf_smart_cache_settings');
+    $settings  = get_option('cf_smart_cache_settings');
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
     $email     = $settings['cf_smart_cache_email'] ?? '';
     $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
     $zone_id   = $settings['cf_smart_cache_zone_id'] ?? '';
-    
+
     // Determine authentication method
     if (!empty($api_token)) {
         $headers = [
             'Authorization' => 'Bearer ' . $api_token,
-            'Content-Type' => 'application/json'
+            'Content-Type'  => 'application/json'
         ];
     } elseif (!empty($email) && !empty($api_key)) {
         $headers = [
@@ -572,21 +627,21 @@ function cf_smart_cache_purge_all_cache()
         set_transient('cf_smart_cache_notice_' . get_current_user_id(), 'Error: API credentials not configured.', 45);
         return;
     }
-    
+
     if (empty($zone_id)) {
         set_transient('cf_smart_cache_notice_' . get_current_user_id(), 'Error: Zone ID not configured.', 45);
         return;
     }
-    
+
     $api_url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache";
-    
+
     $response = wp_remote_post($api_url, [
         'method'  => 'POST',
         'headers' => $headers,
         'body'    => json_encode(['purge_everything' => true]),
         'timeout' => 15
     ]);
-    
+
     $validated_response = cf_smart_cache_validate_api_response($response, 'purge all cache');
     if (is_wp_error($validated_response)) {
         $message = 'Error: ' . $validated_response->get_error_message();
@@ -594,7 +649,7 @@ function cf_smart_cache_purge_all_cache()
         $message = 'Success: All cache purged from Cloudflare.';
         cf_smart_cache_log('Manual purge all cache executed');
     }
-    
+
     set_transient('cf_smart_cache_notice_' . get_current_user_id(), $message, 45);
 }
 
@@ -604,14 +659,14 @@ function cf_smart_cache_purge_all_cache()
 function cf_smart_cache_display_cache_status()
 {
     $settings = get_option('cf_smart_cache_settings');
-    $zone_id = $settings['cf_smart_cache_zone_id'] ?? '';
-    
+    $zone_id  = $settings['cf_smart_cache_zone_id'] ?? '';
+
     echo '<div class="cf-cache-status">';
     if (empty($zone_id)) {
         echo '<p><span class="dashicons dashicons-warning" style="color: #f56e28;"></span> Please configure your Cloudflare API credentials and select a zone.</p>';
     } else {
         echo '<p><span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span> Cloudflare Smart Cache is active for zone: <code>' . esc_html($zone_id) . '</code></p>';
-        
+
         // Show recent activity
         $rate_limit_key = 'cf_smart_cache_rate_limit';
         $requests_count = get_transient($rate_limit_key) ?: 0;
@@ -628,40 +683,40 @@ function cf_smart_cache_display_cache_status()
  */
 function cf_smart_cache_check_rate_limit()
 {
-    $rate_limit_key = 'cf_smart_cache_rate_limit';
+    $rate_limit_key  = 'cf_smart_cache_rate_limit';
     $rate_limit_data = get_transient($rate_limit_key);
-    
+
     // Initialize rate limit data if not exists
     if (!$rate_limit_data) {
         $rate_limit_data = [
-            'requests' => 0,
-            'reset_time' => time() + 300, // 5 minutes from now
+            'requests'     => 0,
+            'reset_time'   => time() + 300, // 5 minutes from now
             'window_start' => time()
         ];
     }
-    
+
     $current_time = time();
-    
+
     // Reset counter if we're in a new 5-minute window
     if ($current_time >= $rate_limit_data['reset_time']) {
         $rate_limit_data = [
-            'requests' => 0,
-            'reset_time' => $current_time + 300,
+            'requests'     => 0,
+            'reset_time'   => $current_time + 300,
             'window_start' => $current_time
         ];
     }
-    
+
     // Check if we're approaching the limit (use 1000 to leave buffer)
     if ($rate_limit_data['requests'] >= 1000) {
         $wait_time = $rate_limit_data['reset_time'] - $current_time;
         cf_smart_cache_log(sprintf('Rate limit approaching (%d/1200), waiting %d seconds', $rate_limit_data['requests'], $wait_time), 'warning');
         return false;
     }
-    
+
     // Increment counter and save
     $rate_limit_data['requests']++;
     set_transient($rate_limit_key, $rate_limit_data, 300);
-    
+
     cf_smart_cache_log(sprintf('API request %d/1200 in current window', $rate_limit_data['requests']), 'debug');
     return true;
 }
@@ -671,26 +726,41 @@ function cf_smart_cache_check_rate_limit()
  */
 function cf_smart_cache_batch_purge($urls_to_purge)
 {
-    if (empty($urls_to_purge)) {
-        return;
+    $settings  = get_option('cf_smart_cache_settings');
+    $api_token = $settings['cf_smart_cache_api_token'] ?? '';
+    $email     = $settings['cf_smart_cache_email'] ?? '';
+    $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
+    $zone_id   = $settings['cf_smart_cache_zone_id'] ?? '';
+    if (empty($zone_id)) {
+        return new WP_Error('missing_zone', 'Cloudflare zone ID is not set');
     }
-    
-    // Cloudflare allows max 30 URLs per purge request
-    $batch_size = 30;
-    $url_batches = array_chunk($urls_to_purge, $batch_size);
-    
-    foreach ($url_batches as $batch) {
-        if (!cf_smart_cache_check_rate_limit()) {
-            cf_smart_cache_log('Rate limit reached, skipping batch purge', 'warning');
-            break;
+    $api_url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache";
+    $chunks  = array_chunk($urls_to_purge, 30); // Cloudflare API allows up to 30 URLs per request
+    $results = [];
+    foreach ($chunks as $chunk) {
+        $headers = [
+            'Content-Type' => 'application/json',
+        ];
+        if (!empty($api_token)) {
+            $headers['Authorization'] = 'Bearer ' . $api_token;
+        } elseif (!empty($email) && !empty($api_key)) {
+            $headers['X-Auth-Email'] = $email;
+            $headers['X-Auth-Key']   = $api_key;
+        } else {
+            return new WP_Error('missing_auth', 'Cloudflare API credentials are not set');
         }
-        cf_smart_cache_execute_purge($batch);
-        
-        // Small delay between batches to be respectful
-        if (count($url_batches) > 1) {
-            usleep(500000); // 0.5 second delay
-        }
+        $body      = json_encode(['files' => $chunk]);
+        $response  = wp_remote_post($api_url, [
+            'headers' => $headers,
+            'body'    => $body,
+            'timeout' => 15
+        ]);
+        $validated = cf_smart_cache_validate_api_response($response, 'batch purge');
+        $results[] = $validated;
+        // Optional: add delay to avoid rate limits
+        sleep(1);
     }
+    return $results;
 }
 
 // ===================== Core Purge Logic =====================
@@ -699,18 +769,18 @@ function cf_smart_cache_execute_purge($urls_to_purge)
     if (empty($urls_to_purge)) {
         return;
     }
-    
-    $settings = get_option('cf_smart_cache_settings');
+
+    $settings  = get_option('cf_smart_cache_settings');
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
     $email     = $settings['cf_smart_cache_email'] ?? '';
     $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
     $zone_id   = $settings['cf_smart_cache_zone_id'] ?? '';
-    
+
     // Determine authentication method - prefer API token
     if (!empty($api_token)) {
         $headers = [
             'Authorization' => 'Bearer ' . $api_token,
-            'Content-Type' => 'application/json'
+            'Content-Type'  => 'application/json'
         ];
     } elseif (!empty($email) && !empty($api_key)) {
         $headers = [
@@ -722,24 +792,24 @@ function cf_smart_cache_execute_purge($urls_to_purge)
         cf_smart_cache_log('API credentials not configured for purge operation', 'error');
         return;
     }
-    
+
     if (empty($zone_id)) {
         cf_smart_cache_log('Zone ID not configured for purge operation', 'error');
         return;
     }
-    
+
     $urls_to_purge = array_values(array_unique($urls_to_purge));
     $api_url       = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache";
-    
+
     cf_smart_cache_log(sprintf('Executing purge for %d URLs: %s', count($urls_to_purge), implode(', ', $urls_to_purge)));
-    
+
     $response = wp_remote_post($api_url, [
         'method'  => 'POST',
         'headers' => $headers,
         'body'    => json_encode(['files' => $urls_to_purge]),
         'timeout' => 15
     ]);
-    
+
     $validated_response = cf_smart_cache_validate_api_response($response, 'cache purge');
     if (is_wp_error($validated_response)) {
         $message = "CF API Error: " . $validated_response->get_error_message();
@@ -748,7 +818,7 @@ function cf_smart_cache_execute_purge($urls_to_purge)
         $message = sprintf('Success: Cloudflare purge request sent for %d URLs.', count($urls_to_purge));
         cf_smart_cache_log($message);
     }
-    
+
     set_transient('cf_smart_cache_notice_' . get_current_user_id(), $message, 45);
 }
 
@@ -759,10 +829,10 @@ function cf_smart_cache_execute_purge($urls_to_purge)
  */
 function cf_smart_cache_get_supported_post_types()
 {
-    $default_types = ['post', 'page'];
-    $custom_types = get_post_types(['public' => true, '_builtin' => false], 'names');
+    $default_types   = ['post', 'page'];
+    $custom_types    = get_post_types(['public' => true, '_builtin' => false], 'names');
     $supported_types = array_merge($default_types, $custom_types);
-    
+
     return apply_filters('cf_smart_cache_supported_post_types', $supported_types);
 }
 
@@ -775,12 +845,12 @@ function cf_smart_cache_get_post_purge_urls($post_id)
     if (!$post || !in_array($post->post_type, cf_smart_cache_get_supported_post_types())) {
         return [];
     }
-    
+
     $urls = [
         home_url('/'), // Homepage
         get_permalink($post_id) // Post/page URL
     ];
-    
+
     // Add archive URLs for posts
     if ($post->post_type === 'post') {
         // Add category URLs
@@ -790,7 +860,7 @@ function cf_smart_cache_get_post_purge_urls($post_id)
                 $urls[] = get_category_link($category->term_id);
             }
         }
-        
+
         // Add tag URLs
         $tags = get_the_tags($post_id);
         if (!empty($tags)) {
@@ -798,17 +868,17 @@ function cf_smart_cache_get_post_purge_urls($post_id)
                 $urls[] = get_tag_link($tag->term_id);
             }
         }
-        
+
         // Add date archives
-        $year = get_the_time('Y', $post_id);
-        $month = get_the_time('m', $post_id);
+        $year   = get_the_time('Y', $post_id);
+        $month  = get_the_time('m', $post_id);
         $urls[] = get_year_link($year);
         $urls[] = get_month_link($year, $month);
-        
+
         // Add author archive
         $urls[] = get_author_posts_url($post->post_author);
     }
-    
+
     // Add custom taxonomy URLs for custom post types
     $taxonomies = get_object_taxonomies($post->post_type, 'objects');
     foreach ($taxonomies as $taxonomy) {
@@ -821,7 +891,7 @@ function cf_smart_cache_get_post_purge_urls($post_id)
             }
         }
     }
-    
+
     // Add post type archive URL
     if ($post->post_type !== 'post' && $post->post_type !== 'page') {
         $archive_url = get_post_type_archive_link($post->post_type);
@@ -829,7 +899,7 @@ function cf_smart_cache_get_post_purge_urls($post_id)
             $urls[] = $archive_url;
         }
     }
-    
+
     return apply_filters('cf_smart_cache_post_purge_urls', array_unique($urls), $post_id, $post);
 }
 
@@ -888,58 +958,58 @@ add_action('admin_notices', 'cf_smart_cache_display_admin_notice');
 function cf_smart_cache_get_performance_metrics()
 {
     $settings = get_option('cf_smart_cache_settings', []);
-    $zone_id = $settings['cf_smart_cache_zone_id'] ?? '';
-    
+    $zone_id  = $settings['cf_smart_cache_zone_id'] ?? '';
+
     if (empty($zone_id)) {
         return new WP_Error('missing_zone', 'Zone ID not configured');
     }
-    
+
     // Check rate limit before making API call
     if (!cf_smart_cache_check_rate_limit()) {
         return new WP_Error('rate_limited', 'API rate limit reached, please try again later');
     }
-    
-    $api_token = $settings['cf_smart_cache_api_token'] ?? '';
-    $email = $settings['cf_smart_cache_email'] ?? '';
+
+    $api_token      = $settings['cf_smart_cache_api_token'] ?? '';
+    $email          = $settings['cf_smart_cache_email'] ?? '';
     $global_api_key = $settings['cf_smart_cache_global_api_key'] ?? '';
-    
+
     $headers = [
         'Content-Type' => 'application/json',
-        'User-Agent' => 'CF-Smart-Cache-WordPress/' . get_bloginfo('version'),
+        'User-Agent'   => 'CF-Smart-Cache-WordPress/' . get_bloginfo('version'),
     ];
-    
+
     // Use API token if available (recommended method)
     if (!empty($api_token)) {
         $headers['Authorization'] = 'Bearer ' . $api_token;
     } elseif (!empty($email) && !empty($global_api_key)) {
         $headers['X-Auth-Email'] = $email;
-        $headers['X-Auth-Key'] = $global_api_key;
+        $headers['X-Auth-Key']   = $global_api_key;
     } else {
         return new WP_Error('missing_credentials', 'API credentials not configured');
     }
-    
+
     // Get cache analytics for the last 24 hours
-    $end_time = current_time('timestamp');
+    $end_time   = current_time('timestamp');
     $start_time = $end_time - (24 * 60 * 60); // 24 hours ago
-    
+
     $url = sprintf(
         'https://api.cloudflare.com/client/v4/zones/%s/analytics/dashboard?since=%s&until=%s',
         $zone_id,
         gmdate('Y-m-d\TH:i:s\Z', $start_time),
         gmdate('Y-m-d\TH:i:s\Z', $end_time)
     );
-    
+
     $response = wp_remote_get($url, [
         'headers' => $headers,
         'timeout' => 30
     ]);
-    
+
     $validated_response = cf_smart_cache_validate_api_response($response, 'analytics fetch');
-    
+
     if (is_wp_error($validated_response)) {
         return $validated_response;
     }
-    
+
     return $validated_response['result'] ?? [];
 }
 
@@ -949,23 +1019,23 @@ function cf_smart_cache_get_performance_metrics()
 function cf_smart_cache_get_cache_status()
 {
     $status = [
-        'configured' => false,
-        'api_working' => false,
-        'edge_caching' => false,
+        'configured'      => false,
+        'api_working'     => false,
+        'edge_caching'    => false,
         'recommendations' => []
     ];
-    
+
     $settings = get_option('cf_smart_cache_settings', []);
-    
+
     // Check if basic configuration is complete
-    $zone_id = $settings['cf_smart_cache_zone_id'] ?? '';
-    $api_token = $settings['cf_smart_cache_api_token'] ?? '';
-    $email = $settings['cf_smart_cache_email'] ?? '';
+    $zone_id        = $settings['cf_smart_cache_zone_id'] ?? '';
+    $api_token      = $settings['cf_smart_cache_api_token'] ?? '';
+    $email          = $settings['cf_smart_cache_email'] ?? '';
     $global_api_key = $settings['cf_smart_cache_global_api_key'] ?? '';
-    
+
     if (!empty($zone_id) && (!empty($api_token) || (!empty($email) && !empty($global_api_key)))) {
         $status['configured'] = true;
-        
+
         // Test API connectivity
         if (cf_smart_cache_check_rate_limit()) {
             $zones = cf_smart_cache_fetch_zones();
@@ -976,7 +1046,7 @@ function cf_smart_cache_get_cache_status()
     } else {
         $status['recommendations'][] = 'Configure your Cloudflare API credentials and select a zone.';
     }
-    
+
     // Check if edge caching headers are being sent
     if (function_exists('headers_list')) {
         $headers = headers_list();
@@ -987,20 +1057,20 @@ function cf_smart_cache_get_cache_status()
             }
         }
     }
-    
+
     // Add recommendations based on configuration
     if ($status['configured'] && !$status['api_working']) {
         $status['recommendations'][] = 'API credentials appear to be invalid. Please check your API token or Global API Key.';
     }
-    
+
     if ($status['configured'] && empty($api_token)) {
         $status['recommendations'][] = 'Consider upgrading to API Token authentication for better security.';
     }
-    
+
     if (!$status['edge_caching']) {
         $status['recommendations'][] = 'Edge caching headers are not being sent. Make sure the plugin is active and check for conflicts.';
     }
-    
+
     return $status;
 }
 
@@ -1009,37 +1079,23 @@ function cf_smart_cache_get_cache_status()
  */
 function cf_smart_cache_admin_bar_menu($wp_admin_bar)
 {
-    if (!current_user_can('manage_options')) {
-        return;
+    if (!is_admin() && !is_user_logged_in()) return;
+    $status = 'Edge Cache: '; // Default
+    if (defined('DOING_AJAX') && DOING_AJAX) {
+        $status .= 'AJAX (Bypass)';
+    } elseif (defined('REST_REQUEST') && REST_REQUEST) {
+        $status .= 'REST (Bypass)';
+    } elseif (is_admin()) {
+        $status .= 'Admin (Bypass)';
+    } else {
+        $status .= 'Public';
     }
-    
-    $wp_admin_bar->add_menu([
-        'id'    => 'cf-smart-cache',
-        'title' => '⚡ CF Cache',
-        'href'  => admin_url('options-general.php?page=cf_smart_cache'),
-    ]);
-    
-    $wp_admin_bar->add_menu([
-        'id'     => 'cf-smart-cache-purge-current',
-        'parent' => 'cf-smart-cache',
-        'title'  => 'Purge Current Page',
-        'href'   => wp_nonce_url(
-            add_query_arg([
-                'action' => 'cf_smart_cache_purge_current',
-                'post_id' => get_the_ID()
-            ], admin_url('admin-post.php')),
-            'cf-smart-cache-purge-current'
-        ),
-    ]);
-    
-    $wp_admin_bar->add_menu([
-        'id'     => 'cf-smart-cache-purge-all',
-        'parent' => 'cf-smart-cache',
-        'title'  => 'Purge All Cache',
-        'href'   => wp_nonce_url(
-            add_query_arg('action', 'cf_smart_cache_purge_all', admin_url('admin-post.php')),
-            'cf-smart-cache-purge-all'
-        ),
+    $wp_admin_bar->add_node([
+        'id'    => 'cf_smart_cache_status',
+        'title' => $status,
+        'meta'  => [
+            'title' => 'Cloudflare Smart Cache Status',
+        ],
     ]);
 }
 add_action('admin_bar_menu', 'cf_smart_cache_admin_bar_menu', 999);
@@ -1052,32 +1108,32 @@ function cf_smart_cache_handle_admin_actions()
     // Purge current page
     if (isset($_GET['action']) && $_GET['action'] === 'cf_smart_cache_purge_current') {
         check_admin_referer('cf-smart-cache-purge-current');
-        
+
         $post_id = intval($_GET['post_id'] ?? 0);
         if ($post_id > 0) {
             $urls = cf_smart_cache_get_post_purge_urls($post_id);
             if (!empty($urls)) {
                 cf_smart_cache_batch_purge($urls);
-                
+
                 $user_id = get_current_user_id();
                 $message = sprintf('Cache purged for current page and related URLs (%d URLs)', count($urls));
                 set_transient("cf_smart_cache_notice_{$user_id}", $message, 30);
             }
         }
-        
+
         wp_safe_redirect(wp_get_referer() ?: home_url());
         exit;
     }
-    
+
     // Purge all cache
     if (isset($_GET['action']) && $_GET['action'] === 'cf_smart_cache_purge_all') {
         check_admin_referer('cf-smart-cache-purge-all');
-        
+
         cf_smart_cache_purge_all_cache();
-        
+
         $user_id = get_current_user_id();
         set_transient("cf_smart_cache_notice_{$user_id}", 'All cache purged successfully', 30);
-        
+
         wp_safe_redirect(wp_get_referer() ?: admin_url());
         exit;
     }
@@ -1091,8 +1147,8 @@ add_action('admin_post_cf_smart_cache_purge_all', 'cf_smart_cache_handle_admin_a
 function cf_smart_cache_admin_notices()
 {
     $user_id = get_current_user_id();
-    $notice = get_transient("cf_smart_cache_notice_{$user_id}");
-    
+    $notice  = get_transient("cf_smart_cache_notice_{$user_id}");
+
     if ($notice) {
         delete_transient("cf_smart_cache_notice_{$user_id}");
         echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($notice) . '</p></div>';
@@ -1108,35 +1164,35 @@ function cf_smart_cache_enhanced_log($message, $level = 'info', $context = [])
     if (!defined('WP_DEBUG') || !WP_DEBUG || !defined('WP_DEBUG_LOG') || !WP_DEBUG_LOG) {
         return;
     }
-    
-    $timestamp = current_time('Y-m-d H:i:s T');
+
+    $timestamp         = current_time('Y-m-d H:i:s T');
     $formatted_message = sprintf(
         '[%s] [CF Smart Cache] [%s] %s',
         $timestamp,
         strtoupper($level),
         $message
     );
-    
+
     if (!empty($context)) {
         $formatted_message .= ' Context: ' . wp_json_encode($context);
     }
-    
+
     error_log($formatted_message);
-    
+
     // Also store recent logs in transient for admin display
-    $recent_logs = get_transient('cf_smart_cache_recent_logs') ?: [];
+    $recent_logs   = get_transient('cf_smart_cache_recent_logs') ?: [];
     $recent_logs[] = [
         'timestamp' => time(),
-        'level' => $level,
-        'message' => $message,
-        'context' => $context
+        'level'     => $level,
+        'message'   => $message,
+        'context'   => $context
     ];
-    
+
     // Keep only last 50 log entries
     if (count($recent_logs) > 50) {
         $recent_logs = array_slice($recent_logs, -50);
     }
-    
+
     set_transient('cf_smart_cache_recent_logs', $recent_logs, 3600); // 1 hour
 }
 
@@ -1151,17 +1207,17 @@ function cf_smart_cache_enhanced_post_transition($new_status, $old_status, $post
     if (!in_array($post->post_type, cf_smart_cache_get_supported_post_types())) {
         return;
     }
-    
+
     // Log the transition for debugging
     cf_smart_cache_enhanced_log(
         sprintf('Post transition: %s -> %s for post %d (%s)', $old_status, $new_status, $post->ID, $post->post_type),
         'debug',
         ['post_id' => $post->ID, 'post_type' => $post->post_type, 'old_status' => $old_status, 'new_status' => $new_status]
     );
-    
+
     // Determine if cache purge is needed
     $should_purge = false;
-    
+
     if ($new_status === 'publish' && $old_status !== 'publish') {
         // Post was published
         $should_purge = true;
@@ -1172,13 +1228,13 @@ function cf_smart_cache_enhanced_post_transition($new_status, $old_status, $post
         // Published post was updated
         $should_purge = true;
     }
-    
+
     if ($should_purge) {
         // Use enhanced batch purging
         $urls = cf_smart_cache_get_post_purge_urls($post->ID);
         if (!empty($urls)) {
             cf_smart_cache_batch_purge($urls);
-            
+
             cf_smart_cache_enhanced_log(
                 sprintf('Cache purged for post %d: %d URLs', $post->ID, count($urls)),
                 'info',
@@ -1201,7 +1257,7 @@ function cf_smart_cache_comment_status_change($comment_id, $comment_status)
             $urls = cf_smart_cache_get_post_purge_urls($post->ID);
             if (!empty($urls)) {
                 cf_smart_cache_batch_purge($urls);
-                
+
                 cf_smart_cache_enhanced_log(
                     sprintf('Cache purged due to comment status change on post %d', $post->ID),
                     'info',
@@ -1227,7 +1283,8 @@ function cf_smart_cache_rest_api_headers()
         header('x-HTML-Edge-Cache: cache');
     }
 }
-add_action('rest_api_init', function() {
+add_action('rest_api_init', function ()
+{
     add_action('rest_pre_serve_request', 'cf_smart_cache_rest_api_headers');
 });
 
@@ -1239,14 +1296,14 @@ add_action('rest_api_init', function() {
 function cf_smart_cache_get_plugin_info()
 {
     return [
-        'version' => '2.0.0',
-        'min_wp_version' => '5.0',
+        'version'           => '2.0.0',
+        'min_wp_version'    => '5.0',
         'tested_wp_version' => '6.4',
-        'min_php_version' => '7.4',
-        'features' => [
+        'min_php_version'   => '7.4',
+        'features'          => [
             'API Token Authentication',
             'Enhanced Security Headers',
-            'Batch Cache Purging', 
+            'Batch Cache Purging',
             'Rate Limiting',
             'Multi Post Type Support',
             'Admin Toolbar Integration',
@@ -1255,11 +1312,18 @@ function cf_smart_cache_get_plugin_info()
             'Developer Hooks',
             'REST API Caching'
         ],
-        'hooks' => [
+        'hooks'             => [
             'cf_smart_cache_bypass_cookies',
-            'cf_smart_cache_supported_post_types', 
+            'cf_smart_cache_supported_post_types',
             'cf_smart_cache_purge_urls',
             'cf_smart_cache_post_purge_urls'
         ]
     ];
 }
+
+add_action('admin_notices', function ()
+{
+    if (isset($_GET['page']) && $_GET['page'] === 'cf_smart_cache') {
+        echo '<div class="notice notice-warning"><p><strong>Cloudflare Smart Cache:</strong> The <em>Bypass Cookie Prefixes</em> list <b>must</b> match the configuration in your Cloudflare Worker (LOGIN_COOKIE_PREFIXES). <a href="admin.php?page=cf_smart_cache_export_bypass_cookies" target="_blank">Export as JSON for Worker</a>. If you update this list, you must redeploy your Worker with the new list for security.</p></div>';
+    }
+});
