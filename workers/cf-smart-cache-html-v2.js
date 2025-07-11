@@ -1,3 +1,16 @@
+// List of cookie prefixes that indicate a logged-in or session user (WordPress, WooCommerce, PHPSESSID, etc.)
+const LOGIN_COOKIE_PREFIXES = [
+  "wordpress_logged_in",
+  "wp-",
+  "wordpress_sec",
+  "woocommerce_",
+  "PHPSESSID",
+  "session",
+  "auth",
+  "token",
+  "user",
+  // Add your own hosting's login/session cookie names or prefixes here
+];
 // cf-smart-cache-html-v2.js
 // KV-based HTML edge caching for Cloudflare Workers
 
@@ -69,13 +82,27 @@ async function handleRequest(event) {
     return response;
   }
 
-  // Bypass caching if request has cookies (possible private session)
-  const cookieHeader = request.headers.get("cookie");
-  if (cookieHeader && cookieHeader.length) {
+  // Bypass caching if request has login/session cookies (WordPress, WooCommerce, PHPSESSID, etc.)
+  if (hasLoginCookie(request)) {
     response = new Response(response.body, response);
-    response.headers.set("x-HTML-Edge-Cache-Status", "Bypass Any Cookie");
+    response.headers.set("x-HTML-Edge-Cache-Status", "Bypass Login Cookie");
     return response;
   }
+// Returns true if the request has any login/session/auth cookies
+function hasLoginCookie(request) {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return false;
+  const cookies = cookieHeader.split(";");
+  for (let cookie of cookies) {
+    const name = cookie.split("=")[0].trim();
+    for (let prefix of LOGIN_COOKIE_PREFIXES) {
+      if (name.startsWith(prefix)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
   // Bypass if response has Set-Cookie header (dynamic content)
   if (response.headers.has("Set-Cookie")) {
