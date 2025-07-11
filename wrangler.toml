@@ -1,0 +1,16 @@
+# Wrangler configuration for Cloudflare Worker environment variables
+# Place this in your project root as wrangler.toml
+
+name = "cloudflare-smart-cache"
+main = "workers/cf-smart-cache-html-v1.js"
+type = "javascript"
+
+[vars]
+CLOUDFLARE_EMAIL = "your-email@example.com"
+CLOUDFLARE_API_KEY = "your-global-api-key"
+CLOUDFLARE_ZONE_ID = "your-zone-id"
+
+# For local development, create a .dev.vars file (do NOT commit secrets):
+# CLOUDFLARE_EMAIL=your-email@example.com
+# CLOUDFLARE_API_KEY=your-global-api-key
+# CLOUDFLARE_ZONE_ID=your-zone-id
