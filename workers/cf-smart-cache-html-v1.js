@@ -1,5 +1,5 @@
 // IMPORTANT: Either A Key/Value Namespace must be bound to this worker script
-// using the variable name EDGE_CACHE. or the API parameters below should be
+// using the variable name SMART_CACHE. or the API parameters below should be
 // configured. KV is recommended if possible since it can purge just the HTML
 // instead of the full cache.
 
@@ -277,11 +277,11 @@ async function getCachedResponse(request) {
  * @param {Event} event - Original event
  */
 async function purgeCache(cacheVer, event) {
-  if (typeof EDGE_CACHE !== "undefined") {
+  if (typeof SMART_CACHE !== "undefined") {
     // Purge the KV cache by bumping the version number
     cacheVer = await GetCurrentCacheVersion(cacheVer);
     cacheVer++;
-    event.waitUntil(EDGE_CACHE.put("html_cache_version", cacheVer.toString()));
+    event.waitUntil(SMART_CACHE.put("html_cache_version", cacheVer.toString()));
   } else {
     // Purge everything using the API
     const url =
@@ -425,13 +425,13 @@ function getResponseOptions(response) {
  */
 async function GetCurrentCacheVersion(cacheVer) {
   if (cacheVer === null) {
-    if (typeof EDGE_CACHE !== "undefined") {
-      cacheVer = await EDGE_CACHE.get("html_cache_version");
+    if (typeof SMART_CACHE !== "undefined") {
+      cacheVer = await SMART_CACHE.get("html_cache_version");
       if (cacheVer === null) {
         // Uninitialized - first time through, initialize KV with a value
         // Blocking but should only happen immediately after worker activation.
         cacheVer = 0;
-        await EDGE_CACHE.put("html_cache_version", cacheVer.toString());
+        await SMART_CACHE.put("html_cache_version", cacheVer.toString());
       } else {
         cacheVer = parseInt(cacheVer);
       }

@@ -15,7 +15,7 @@ const LOGIN_COOKIE_PREFIXES = [
 // KV-based HTML edge caching for Cloudflare Workers
 
 // IMPORTANT: Either a Key/Value Namespace must be bound to this worker script
-// using the variable name EDGE_CACHE, or the API parameters below should be configured.
+// using the variable name SMART_CACHE, or the API parameters below should be configured.
 // KV is recommended if possible since it can purge just the HTML instead of the full cache.
 
 const CLOUDFLARE_API = {
@@ -149,11 +149,11 @@ async function handleRequest(event) {
 
 // KV version helpers
 async function getCurrentCacheVersion() {
-  if (typeof EDGE_CACHE !== "undefined") {
-    let cacheVer = await EDGE_CACHE.get("html_cache_version");
+  if (typeof SMART_CACHE !== "undefined") {
+    let cacheVer = await SMART_CACHE.get("html_cache_version");
     if (cacheVer === null) {
       cacheVer = 0;
-      await EDGE_CACHE.put("html_cache_version", cacheVer.toString());
+      await SMART_CACHE.put("html_cache_version", cacheVer.toString());
     } else {
       cacheVer = parseInt(cacheVer);
     }
@@ -175,9 +175,9 @@ function generateCacheRequest(request, cacheVer) {
 }
 
 async function purgeCache() {
-  if (typeof EDGE_CACHE !== "undefined") {
+  if (typeof SMART_CACHE !== "undefined") {
     let cacheVer = await getCurrentCacheVersion();
     cacheVer++;
-    await EDGE_CACHE.put("html_cache_version", cacheVer.toString());
+    await SMART_CACHE.put("html_cache_version", cacheVer.toString());
   }
 }
