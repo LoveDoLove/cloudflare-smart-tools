@@ -1,3 +1,24 @@
+/*
+ Copyright (c) 2025 LoveDoLove
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy of
+ this software and associated documentation files (the "Software"), to deal in
+ the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 // List of cookie prefixes that indicate a logged-in or session user (WordPress, WooCommerce, PHPSESSID, etc.)
 const LOGIN_COOKIE_PREFIXES = [
   "wordpress_logged_in",
@@ -20,13 +41,16 @@ const LOGIN_COOKIE_PREFIXES = [
   // Add your own hosting's login/session cookie names or prefixes here
 ];
 
-
 // cf-smart-cache-html-v2.js
 // KV-based HTML edge caching for Cloudflare Workers with Stale-While-Revalidate and URL Pattern Bypass
 
 // URL patterns to bypass cache (regex)
-const BYPASS_URL_PATTERNS = [/\/wp-admin\//, /\/api\//, /\/wp-login\.php/, /\/admin(\/|$)/];
-
+const BYPASS_URL_PATTERNS = [
+  /\/wp-admin\//,
+  /\/api\//,
+  /\/wp-login\.php/,
+  /\/admin(\/|$)/,
+];
 
 // Stale-While-Revalidate window (in seconds)
 const SWR_WINDOW = 30; // Serve stale cache for up to 30 seconds while revalidating
@@ -71,7 +95,6 @@ async function handleRequest(event) {
     return fetch(request);
   }
 
-
   // Use versioned cache key
   const cacheVer = await getCurrentCacheVersion();
   const cacheKeyRequest = generateCacheRequest(request, cacheVer);
@@ -92,13 +115,19 @@ async function handleRequest(event) {
       cachedResponse = new Response(cachedResponse.body, cachedResponse);
       cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Hit");
       cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
-      cachedResponse.headers.set("x-Edge-Cache-SWR-Mode", SERVE_STALE_WHILE_REVALIDATE ? "SWR" : "No-SWR");
+      cachedResponse.headers.set(
+        "x-Edge-Cache-SWR-Mode",
+        SERVE_STALE_WHILE_REVALIDATE ? "SWR" : "No-SWR"
+      );
       return cachedResponse;
     } else if (age <= SWR_WINDOW + 315360000) {
       if (SERVE_STALE_WHILE_REVALIDATE) {
         // Serve stale and revalidate in background
         cachedResponse = new Response(cachedResponse.body, cachedResponse);
-        cachedResponse.headers.set("x-HTML-Edge-Cache-Status", "Stale-While-Revalidate");
+        cachedResponse.headers.set(
+          "x-HTML-Edge-Cache-Status",
+          "Stale-While-Revalidate"
+        );
         cachedResponse.headers.set("x-Edge-Cache-Age", age.toString());
         cachedResponse.headers.set("x-Edge-Cache-SWR-Mode", "SWR");
         event.waitUntil(
@@ -107,7 +136,12 @@ async function handleRequest(event) {
         return cachedResponse;
       } else {
         // Do NOT serve stale, wait for fresh (block until revalidated)
-        let freshResponse = await fetchAndCacheFresh(request, cacheKeyRequest, swrMetaKey, event);
+        let freshResponse = await fetchAndCacheFresh(
+          request,
+          cacheKeyRequest,
+          swrMetaKey,
+          event
+        );
         freshResponse.headers.set("x-HTML-Edge-Cache-Status", "Revalidated");
         freshResponse.headers.set("x-Edge-Cache-Age", "0");
         freshResponse.headers.set("x-Edge-Cache-SWR-Mode", "No-SWR");
@@ -116,45 +150,13 @@ async function handleRequest(event) {
     }
     // If outside SWR window, treat as miss (fetch new)
   }
-// Helper: fetch and cache fresh content synchronously (for No-SWR mode)
-async function fetchAndCacheFresh(request, cacheKeyRequest, swrMetaKey, event) {
-  let forwardRequest = new Request(request.url, {
-    method: request.method,
-    headers: new Headers(request.headers),
-    body: request.body,
-    redirect: request.redirect,
-    credentials: request.credentials,
-    cache: request.cache,
-    referrer: request.referrer,
-    referrerPolicy: request.referrerPolicy,
-    integrity: request.integrity,
-    keepalive: request.keepalive,
-    mode: request.mode,
-    signal: request.signal,
-    duplex: request.duplex,
-  });
-  forwardRequest.headers.set(
-    "x-HTML-Edge-Cache",
-    "supports=cache|purgeall|bypass-cookies"
-  );
-  let response = await fetch(forwardRequest);
-  const accept = request.headers.get("Accept");
-  const isHTML = accept && accept.indexOf("text/html") >= 0;
-  if (response.status === 200 && isHTML) {
-    let safeResponse = new Response(response.body, response);
-    safeResponse.headers.delete("Set-Cookie");
-    safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
-    if (typeof SMART_CACHE !== "undefined") {
-      await SMART_CACHE.put(swrMetaKey, Math.floor(Date.now() / 1000).toString());
-    }
-    await caches.default.put(cacheKeyRequest, safeResponse.clone());
-    return safeResponse;
-  }
-  return response;
-}
-// Helper: revalidate cache in background for SWR
-async function revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, event) {
-  try {
+  // Helper: fetch and cache fresh content synchronously (for No-SWR mode)
+  async function fetchAndCacheFresh(
+    request,
+    cacheKeyRequest,
+    swrMetaKey,
+    event
+  ) {
     let forwardRequest = new Request(request.url, {
       method: request.method,
       headers: new Headers(request.headers),
@@ -175,7 +177,6 @@ async function revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, e
       "supports=cache|purgeall|bypass-cookies"
     );
     let response = await fetch(forwardRequest);
-    // Only cache if response is 200 and HTML
     const accept = request.headers.get("Accept");
     const isHTML = accept && accept.indexOf("text/html") >= 0;
     if (response.status === 200 && isHTML) {
@@ -183,14 +184,64 @@ async function revalidateCache(request, cacheKeyRequest, swrMetaKey, cacheVer, e
       safeResponse.headers.delete("Set-Cookie");
       safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
       if (typeof SMART_CACHE !== "undefined") {
-        await SMART_CACHE.put(swrMetaKey, Math.floor(Date.now() / 1000).toString());
+        await SMART_CACHE.put(
+          swrMetaKey,
+          Math.floor(Date.now() / 1000).toString()
+        );
       }
       await caches.default.put(cacheKeyRequest, safeResponse.clone());
+      return safeResponse;
     }
-  } catch (e) {
-    // Ignore errors in background revalidation
+    return response;
   }
-}
+  // Helper: revalidate cache in background for SWR
+  async function revalidateCache(
+    request,
+    cacheKeyRequest,
+    swrMetaKey,
+    cacheVer,
+    event
+  ) {
+    try {
+      let forwardRequest = new Request(request.url, {
+        method: request.method,
+        headers: new Headers(request.headers),
+        body: request.body,
+        redirect: request.redirect,
+        credentials: request.credentials,
+        cache: request.cache,
+        referrer: request.referrer,
+        referrerPolicy: request.referrerPolicy,
+        integrity: request.integrity,
+        keepalive: request.keepalive,
+        mode: request.mode,
+        signal: request.signal,
+        duplex: request.duplex,
+      });
+      forwardRequest.headers.set(
+        "x-HTML-Edge-Cache",
+        "supports=cache|purgeall|bypass-cookies"
+      );
+      let response = await fetch(forwardRequest);
+      // Only cache if response is 200 and HTML
+      const accept = request.headers.get("Accept");
+      const isHTML = accept && accept.indexOf("text/html") >= 0;
+      if (response.status === 200 && isHTML) {
+        let safeResponse = new Response(response.body, response);
+        safeResponse.headers.delete("Set-Cookie");
+        safeResponse.headers.set("Cache-Control", "public; max-age=315360000");
+        if (typeof SMART_CACHE !== "undefined") {
+          await SMART_CACHE.put(
+            swrMetaKey,
+            Math.floor(Date.now() / 1000).toString()
+          );
+        }
+        await caches.default.put(cacheKeyRequest, safeResponse.clone());
+      }
+    } catch (e) {
+      // Ignore errors in background revalidation
+    }
+  }
 
   // Forward request to origin, preserving all properties (including credentials/cookies)
   let forwardRequest = new Request(request.url, {
