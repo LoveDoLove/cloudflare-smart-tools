@@ -222,15 +222,13 @@ function cf_smart_cache_set_edge_headers()
     // Don't cache if user is logged in
     if (is_user_logged_in()) {
         cf_smart_cache_add_security_headers();
-        if (function_exists('nocache_headers')) {
-            nocache_headers();
-        } else {
-            header('Cache-Control: no-cache, no-store, must-revalidate');
-            header('Pragma: no-cache');
-            header('Expires: 0');
-        }
+        header('Cache-Control: private, no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Set-Cookie: cf_smart_cache_logged_in=1; Path=/; HttpOnly; Secure; SameSite=Lax');
         header('x-HTML-Edge-Cache: nocache');
         header('x-HTML-Edge-Cache-Plugin: active');
+        header('x-HTML-Edge-Cache-Debug: bypass=logged-in');
         cf_smart_cache_log('Edge caching disabled for logged-in user');
         return;
     }
@@ -238,44 +236,38 @@ function cf_smart_cache_set_edge_headers()
     // Don't cache admin, login, or WordPress core pages
     if (is_admin() || $GLOBALS['pagenow'] === 'wp-login.php') {
         cf_smart_cache_add_security_headers();
-        if (function_exists('nocache_headers')) {
-            nocache_headers();
-        } else {
-            header('Cache-Control: no-cache, no-store, must-revalidate');
-            header('Pragma: no-cache');
-            header('Expires: 0');
-        }
+        header('Cache-Control: private, no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Set-Cookie: cf_smart_cache_admin=1; Path=/; HttpOnly; Secure; SameSite=Lax');
         header('x-HTML-Edge-Cache: nocache');
         header('x-HTML-Edge-Cache-Plugin: active');
+        header('x-HTML-Edge-Cache-Debug: bypass=admin');
         cf_smart_cache_log('Edge caching disabled for admin/login page');
         return;
     }
     // REST API and AJAX endpoints: always no-cache
     if (defined('DOING_AJAX') && DOING_AJAX) {
         cf_smart_cache_add_security_headers();
-        if (function_exists('nocache_headers')) {
-            nocache_headers();
-        } else {
-            header('Cache-Control: no-cache, no-store, must-revalidate');
-            header('Pragma: no-cache');
-            header('Expires: 0');
-        }
+        header('Cache-Control: private, no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Set-Cookie: cf_smart_cache_ajax=1; Path=/; HttpOnly; Secure; SameSite=Lax');
         header('x-HTML-Edge-Cache: nocache');
         header('x-HTML-Edge-Cache-Plugin: active');
+        header('x-HTML-Edge-Cache-Debug: bypass=ajax');
         cf_smart_cache_log('Edge caching disabled for AJAX request');
         return;
     }
     if (defined('REST_REQUEST') && REST_REQUEST) {
         cf_smart_cache_add_security_headers();
-        if (function_exists('nocache_headers')) {
-            nocache_headers();
-        } else {
-            header('Cache-Control: no-cache, no-store, must-revalidate');
-            header('Pragma: no-cache');
-            header('Expires: 0');
-        }
+        header('Cache-Control: private, no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Set-Cookie: cf_smart_cache_rest=1; Path=/; HttpOnly; Secure; SameSite=Lax');
         header('x-HTML-Edge-Cache: nocache');
         header('x-HTML-Edge-Cache-Plugin: active');
+        header('x-HTML-Edge-Cache-Debug: bypass=rest');
         cf_smart_cache_log('Edge caching disabled for REST API request');
         return;
     }
@@ -308,6 +300,7 @@ function cf_smart_cache_set_edge_headers()
     cf_smart_cache_add_security_headers();
     // Add plugin debug header for transparency (always set)
     header('x-HTML-Edge-Cache-Plugin: active');
+    header('x-HTML-Edge-Cache-Debug: cache=public');
 
     // Set appropriate cache headers based on page type
     if (is_front_page() || is_home()) {
@@ -1324,6 +1317,33 @@ function cf_smart_cache_get_plugin_info()
 add_action('admin_notices', function ()
 {
     if (isset($_GET['page']) && $_GET['page'] === 'cf_smart_cache') {
-        echo '<div class="notice notice-warning"><p><strong>Cloudflare Smart Cache:</strong> The <em>Bypass Cookie Prefixes</em> list <b>must</b> match the configuration in your Cloudflare Worker (LOGIN_COOKIE_PREFIXES). <a href="admin.php?page=cf_smart_cache_export_bypass_cookies" target="_blank">Export as JSON for Worker</a>. If you update this list, you must redeploy your Worker with the new list for security.</p></div>';
+        echo '<div class="notice notice-warning"><p><strong>Cloudflare Smart Cache:</strong> The <em>Bypass Cookie Prefixes</em> list <b>must</b> match the configuration in your Cloudflare Worker (<code>LOGIN_COOKIE_PREFIXES</code>). <a href="admin.php?page=cf_smart_cache_export_bypass_cookies" target="_blank">Export as JSON for Worker</a>. <br>If you update this list, you <b>must</b> redeploy your Worker with the new list for security. <br><b>Failure to do so can result in private/admin content being cached and leaked to anonymous users!</b></p></div>';
     }
+});
+
+// Export bypass cookie prefix list as JSON for Worker
+function cf_smart_cache_export_bypass_cookies_page()
+{
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+    $options = get_option('cf_smart_cache_settings');
+    $list    = isset($options['cf_smart_cache_bypass_cookies']) ? array_map('trim', explode(',', $options['cf_smart_cache_bypass_cookies'])) : [];
+    $json    = json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    echo '<div class="wrap"><h1>Export Bypass Cookie Prefixes for Worker</h1>';
+    echo '<p>Copy the following JSON array and paste it into your Worker as <code>LOGIN_COOKIE_PREFIXES</code>:</p>';
+    echo '<textarea rows="10" cols="80" readonly>' . esc_textarea($json) . '</textarea>';
+    echo '<p><a href="' . esc_url(admin_url('admin.php?page=cf_smart_cache')) . '">Back to Settings</a></p>';
+    echo '</div>';
+}
+add_action('admin_menu', function ()
+{
+    add_submenu_page(
+        null,
+        'Export Bypass Cookie Prefixes',
+        'Export Bypass Cookie Prefixes',
+        'manage_options',
+        'cf_smart_cache_export_bypass_cookies',
+        'cf_smart_cache_export_bypass_cookies_page'
+    );
 });
