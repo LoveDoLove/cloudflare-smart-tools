@@ -34,7 +34,7 @@ addEventListener("fetch", (event) => {
   // HTML edge cache in front of this worker (only the outermost cache
   // should handle HTML caching in case there are varying levels of support).
   let configured = false;
-  if (typeof EDGE_CACHE !== "undefined") {
+  if (typeof SMART_CACHE !== "undefined") {
     configured = true;
   } else if (
     CLOUDFLARE_API.email.length &&
@@ -455,6 +455,6 @@ function GenerateCacheRequest(request, cacheVer) {
   } else {
     cacheUrl += "?";
   }
-  cacheUrl += "cf_edge_cache_ver=" + cacheVer;
+  cacheUrl += "cf_SMART_CACHE_ver=" + cacheVer;
   return new Request(cacheUrl);
 }
