@@ -26,7 +26,7 @@ const CLOUDFLARE_API = {
 
 const CACHE_HEADERS = ["Cache-Control", "Expires", "Pragma"];
 
-addEventListener("fetch", event => {
+addEventListener("fetch", (event) => {
   event.respondWith(handleRequest(event));
 });
 
@@ -65,7 +65,7 @@ async function handleRequest(event) {
     keepalive: request.keepalive,
     mode: request.mode,
     signal: request.signal,
-    duplex: request.duplex
+    duplex: request.duplex,
   });
   forwardRequest.headers.set(
     "x-HTML-Edge-Cache",
@@ -85,44 +85,56 @@ async function handleRequest(event) {
   // Bypass caching if request has login/session cookies (WordPress, WooCommerce, PHPSESSID, etc.)
   if (hasLoginCookie(request)) {
     response = new Response(response.body, response);
+    // Add debug headers for troubleshooting
+    const debug = globalThis.__loginCookieDebug || {};
     response.headers.set("x-HTML-Edge-Cache-Status", "Bypass Login Cookie");
+    response.headers.set("x-Edge-Debug-Cookies", (debug.all || []).join(", "));
+    response.headers.set(
+      "x-Edge-Debug-Login-Match",
+      (debug.matched || []).join(", ")
+    );
     return response;
   }
-// Returns true if the request has any login/session/auth cookies
-function hasLoginCookie(request) {
-  const cookieHeader = request.headers.get("cookie");
-  if (!cookieHeader) return false;
-  const cookies = cookieHeader.split(";");
-  for (let cookie of cookies) {
-    const name = cookie.split("=")[0].trim();
-    for (let prefix of LOGIN_COOKIE_PREFIXES) {
-      if (name.startsWith(prefix)) {
-        return true;
+  // Returns true if the request has any login/session/auth cookies (case-insensitive, substring match)
+  function hasLoginCookie(request) {
+    const cookieHeader = request.headers.get("cookie");
+    if (!cookieHeader) return false;
+    const cookies = cookieHeader.split(";");
+    let found = false;
+    let matched = [];
+    for (let cookie of cookies) {
+      const name = cookie.split("=")[0].trim().toLowerCase();
+      for (let prefix of LOGIN_COOKIE_PREFIXES) {
+        if (name.includes(prefix.toLowerCase())) {
+          matched.push(name);
+          found = true;
+        }
       }
     }
+    // Attach debug info to globalThis for use in handleRequest
+    globalThis.__loginCookieDebug = {
+      all: cookies.map((c) => c.split("=")[0].trim()),
+      matched,
+    };
+    return found;
   }
-  return false;
-}
-
-  // Bypass if response has Set-Cookie header (dynamic content)
-  if (response.headers.has("Set-Cookie")) {
-    response = new Response(response.body, response);
-    response.headers.set("x-HTML-Edge-Cache-Status", "Bypass Set-Cookie");
-    return response;
-  }
-
-  // Bypass if response is not 200 or not HTML
   if (response.status !== 200 || !isHTML) {
     response = new Response(response.body, response);
-    response.headers.set("x-HTML-Edge-Cache-Status", `Bypass Status/Type: ${response.status}`);
+    response.headers.set(
+      "x-HTML-Edge-Cache-Status",
+      `Bypass Status/Type: ${response.status}`
+    );
     return response;
   }
 
   // Bypass if response has Cache-Control: private or no-store
   const cacheControl = response.headers.get("Cache-Control");
-  if (cacheControl && (/private|no-store|no-cache/i).test(cacheControl)) {
+  if (cacheControl && /private|no-store|no-cache/i.test(cacheControl)) {
     response = new Response(response.body, response);
-    response.headers.set("x-HTML-Edge-Cache-Status", "Bypass Cache-Control: " + cacheControl);
+    response.headers.set(
+      "x-HTML-Edge-Cache-Status",
+      "Bypass Cache-Control: " + cacheControl
+    );
     return response;
   }
 
