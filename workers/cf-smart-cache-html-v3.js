@@ -274,8 +274,8 @@ async function handleRequest(event) {
     return r;
   }
 
-  // Use versioned cache key
-  const cacheVer = await getCurrentCacheVersion();
+  // Use user-state-aware versioned cache key
+  const cacheVer = await getCurrentCacheVersion(request);
   const cacheKeyRequest = generateCacheRequest(
     normalizeRequestForCache(request),
     cacheVer
@@ -723,12 +723,18 @@ function createSafeResponse(response) {
 
   return safeResponse;
 }
-async function getCurrentCacheVersion() {
+// CRITICAL FIX: User-state-aware cache versioning to prevent cross-contamination
+// Each authentication state gets its own independent cache version
+async function getCurrentCacheVersion(request = null) {
   if (typeof SMART_CACHE !== "undefined") {
-    let cacheVer = await SMART_CACHE.get("html_cache_version");
+    // Get user authentication state for state-specific cache versioning
+    const authState = request ? getUserAuthenticationState(request) : "global";
+    const cacheVersionKey = `html_cache_version_${authState}`;
+
+    let cacheVer = await SMART_CACHE.get(cacheVersionKey);
     if (cacheVer === null) {
       cacheVer = 0;
-      await SMART_CACHE.put("html_cache_version", cacheVer.toString());
+      await SMART_CACHE.put(cacheVersionKey, cacheVer.toString());
     } else {
       cacheVer = parseInt(cacheVer);
     }
@@ -787,11 +793,36 @@ function simpleHash(str) {
   return Math.abs(hash).toString(36).substring(0, 8);
 }
 
-async function purgeCache() {
+// CRITICAL FIX: User-state-aware cache purging to prevent cross-contamination
+// Purge cache for specific authentication state or all states
+async function purgeCache(targetAuthState = null) {
   if (typeof SMART_CACHE !== "undefined") {
-    let cacheVer = await getCurrentCacheVersion();
-    cacheVer++;
-    await SMART_CACHE.put("html_cache_version", cacheVer.toString());
+    if (targetAuthState) {
+      // Purge cache for specific authentication state only
+      const cacheVersionKey = `html_cache_version_${targetAuthState}`;
+      let cacheVer = await SMART_CACHE.get(cacheVersionKey);
+      cacheVer = cacheVer ? parseInt(cacheVer) + 1 : 1;
+      await SMART_CACHE.put(cacheVersionKey, cacheVer.toString());
+    } else {
+      // Purge cache for all authentication states (global purge)
+      const authStates = ["anonymous", "session", "auth"];
+      for (const authState of authStates) {
+        const cacheVersionKey = `html_cache_version_${authState}`;
+        let cacheVer = await SMART_CACHE.get(cacheVersionKey);
+        cacheVer = cacheVer ? parseInt(cacheVer) + 1 : 1;
+        await SMART_CACHE.put(cacheVersionKey, cacheVer.toString());
+      }
+
+      // Also purge any auth_* versioned caches (for authenticated users with different hashes)
+      const keys = await SMART_CACHE.list({
+        prefix: "html_cache_version_auth_",
+      });
+      for (const key of keys.keys) {
+        let cacheVer = await SMART_CACHE.get(key.name);
+        cacheVer = cacheVer ? parseInt(cacheVer) + 1 : 1;
+        await SMART_CACHE.put(key.name, cacheVer.toString());
+      }
+    }
   }
 }
 
