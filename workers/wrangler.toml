@@ -2,7 +2,7 @@
 # Place this in your project root as wrangler.toml
 
 name = "cloudflare-smart-cache"
-main = "workers/cf-smart-cache-html-v1.js"
+main = "workers/cf-smart-cache-html.js"
 type = "javascript"
 
 [vars]
