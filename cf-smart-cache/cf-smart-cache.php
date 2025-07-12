@@ -66,10 +66,8 @@ function cf_smart_cache_activate()
     // Set default options if they don't exist
     if (!get_option('cf_smart_cache_settings')) {
         $default_settings = [
-            'cf_smart_cache_api_token'      => '',
-            'cf_smart_cache_email'          => '',
-            'cf_smart_cache_global_api_key' => '',
-            'cf_smart_cache_zone_id'        => ''
+            'cf_smart_cache_api_token' => '',
+            'cf_smart_cache_zone_id'   => ''
         ];
         add_option('cf_smart_cache_settings', $default_settings);
     }
@@ -480,20 +478,6 @@ function cf_smart_cache_settings_init()
         'cf_smart_cache_api_section'
     );
     add_settings_field(
-        'cf_smart_cache_email',
-        __('Cloudflare Account Email (Legacy)', 'cf-smart-cache'),
-        'cf_smart_cache_email_render',
-        'cf_smart_cache',
-        'cf_smart_cache_api_section'
-    );
-    add_settings_field(
-        'cf_smart_cache_global_api_key',
-        __('Global API Key (Legacy)', 'cf-smart-cache'),
-        'cf_smart_cache_global_api_key_render',
-        'cf_smart_cache',
-        'cf_smart_cache_api_section'
-    );
-    add_settings_field(
         'cf_smart_cache_zone_id',
         __('Zone', 'cf-smart-cache'),
         'cf_smart_cache_zone_id_render',
@@ -570,26 +554,15 @@ function cf_smart_cache_fetch_zones()
 
     $settings  = get_option('cf_smart_cache_settings');
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
-    $email     = $settings['cf_smart_cache_email'] ?? '';
-    $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
-
-    // Determine authentication method - prefer API token
     if (!empty($api_token)) {
         $headers = [
             'Authorization' => 'Bearer ' . $api_token,
             'Content-Type'  => 'application/json'
         ];
         cf_smart_cache_log('Using API token authentication for zone fetching');
-    } elseif (!empty($email) && !empty($api_key)) {
-        $headers = [
-            'X-Auth-Email' => $email,
-            'X-Auth-Key'   => $api_key,
-            'Content-Type' => 'application/json'
-        ];
-        cf_smart_cache_log('Using legacy email + API key authentication for zone fetching');
     } else {
         cf_smart_cache_log('No valid API credentials provided', 'error');
-        return new WP_Error('missing_creds', 'API credentials not set. Please provide either an API token or email + API key.');
+        return new WP_Error('missing_creds', 'API token not set. Please provide an API token.');
     }
 
     $retry_attempts = 3;
@@ -635,33 +608,6 @@ function cf_smart_cache_api_token_render()
     );
 }
 
-function cf_smart_cache_email_render()
-{
-    $options = get_option('cf_smart_cache_settings', []);
-    $value   = isset($options['cf_smart_cache_email']) ? esc_attr($options['cf_smart_cache_email']) : '';
-    printf(
-        '<input type="email" name="cf_smart_cache_settings[cf_smart_cache_email]" value="%s" class="regular-text" autocomplete="email">',
-        $value
-    );
-    printf(
-        '<p class="description">%s</p>',
-        esc_html__('Legacy authentication method. Consider using API tokens instead.', 'cf-smart-cache')
-    );
-}
-
-function cf_smart_cache_global_api_key_render()
-{
-    $options = get_option('cf_smart_cache_settings', []);
-    $value   = isset($options['cf_smart_cache_global_api_key']) ? esc_attr($options['cf_smart_cache_global_api_key']) : '';
-    printf(
-        '<input type="password" name="cf_smart_cache_settings[cf_smart_cache_global_api_key]" value="%s" class="regular-text" autocomplete="current-password">',
-        $value
-    );
-    printf(
-        '<p class="description">%s</p>',
-        esc_html__('Legacy authentication method. Consider using API tokens instead.', 'cf-smart-cache')
-    );
-}
 function cf_smart_cache_zone_id_render()
 {
     $options       = get_option('cf_smart_cache_settings', []);
@@ -806,8 +752,6 @@ function cf_smart_cache_purge_all_cache()
 {
     $settings  = get_option('cf_smart_cache_settings');
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
-    $email     = $settings['cf_smart_cache_email'] ?? '';
-    $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
     $zone_id   = $settings['cf_smart_cache_zone_id'] ?? '';
 
     // Determine authentication method
@@ -944,8 +888,6 @@ function cf_smart_cache_batch_purge($urls_to_purge)
 {
     $settings  = get_option('cf_smart_cache_settings');
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
-    $email     = $settings['cf_smart_cache_email'] ?? '';
-    $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
     $zone_id   = $settings['cf_smart_cache_zone_id'] ?? '';
     if (empty($zone_id)) {
         return new WP_Error('missing_zone', 'Cloudflare zone ID is not set');
@@ -954,25 +896,18 @@ function cf_smart_cache_batch_purge($urls_to_purge)
     $chunks  = array_chunk($urls_to_purge, 30); // Cloudflare API allows up to 30 URLs per request
     $results = [];
     foreach ($chunks as $chunk) {
-        $headers = [
+        $headers                  = [
             'Content-Type' => 'application/json',
         ];
-        if (!empty($api_token)) {
-            $headers['Authorization'] = 'Bearer ' . $api_token;
-        } elseif (!empty($email) && !empty($api_key)) {
-            $headers['X-Auth-Email'] = $email;
-            $headers['X-Auth-Key']   = $api_key;
-        } else {
-            return new WP_Error('missing_auth', 'Cloudflare API credentials are not set');
-        }
-        $body      = json_encode(['files' => $chunk]);
-        $response  = wp_remote_post($api_url, [
+        $headers['Authorization'] = 'Bearer ' . $api_token;
+        $body                     = json_encode(['files' => $chunk]);
+        $response                 = wp_remote_post($api_url, [
             'headers' => $headers,
             'body'    => $body,
             'timeout' => 15
         ]);
-        $validated = cf_smart_cache_validate_api_response($response, 'batch purge');
-        $results[] = $validated;
+        $validated                = cf_smart_cache_validate_api_response($response, 'batch purge');
+        $results[]                = $validated;
         if (!is_wp_error($validated)) {
             /**
              * Fires after a successful batch cache purge.
@@ -997,24 +932,16 @@ function cf_smart_cache_execute_purge($urls_to_purge)
 
     $settings  = get_option('cf_smart_cache_settings');
     $api_token = $settings['cf_smart_cache_api_token'] ?? '';
-    $email     = $settings['cf_smart_cache_email'] ?? '';
-    $api_key   = $settings['cf_smart_cache_global_api_key'] ?? '';
     $zone_id   = $settings['cf_smart_cache_zone_id'] ?? '';
 
-    // Determine authentication method - prefer API token
+    // Only API token authentication is supported
     if (!empty($api_token)) {
         $headers = [
             'Authorization' => 'Bearer ' . $api_token,
             'Content-Type'  => 'application/json'
         ];
-    } elseif (!empty($email) && !empty($api_key)) {
-        $headers = [
-            'X-Auth-Email' => $email,
-            'X-Auth-Key'   => $api_key,
-            'Content-Type' => 'application/json'
-        ];
     } else {
-        cf_smart_cache_log('API credentials not configured for purge operation', 'error');
+        cf_smart_cache_log('API token not configured for purge operation', 'error');
         return;
     }
 
