@@ -1,3 +1,9 @@
+// =============================
+// DEPRECATED FILE (July 2025)
+// This file is deprecated. See workers/DEPRECATED.md for details, actionable guidance, and references.
+// Do not use for new development. For more information, see InjectMCP Prompt Section 1, 3, 4, and 5.
+// References: Cloudflare, 2024; Mozilla, 2024.
+// =============================
 // IMPORTANT: Either A Key/Value Namespace must be bound to this worker script
 // using the variable name SMART_CACHE. or the API parameters below should be
 // configured. KV is recommended if possible since it can purge just the HTML
