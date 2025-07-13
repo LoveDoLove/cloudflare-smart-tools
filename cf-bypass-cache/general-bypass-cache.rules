@@ -1,0 +1,41 @@
+# General Cloudflare Bypass Cache Rules
+# Covers WordPress, Laravel, ASP.NET, and common web frameworks
+# Last reviewed: 2025-07-14
+
+# --- WordPress ---
+# Admin area
+(http.request.uri wildcard r"/wp-admin*")
+# Authenticated/logged-in users
+or (http.cookie wildcard r"wordpress_logged_in*")
+or (http.cookie wildcard r"wordpress_sec*")
+or (http.cookie wildcard r"wp_postpass*")
+or (http.cookie wildcard r"wp-*")
+or (http.cookie wildcard r"wordpress*")
+# Comment authors
+or (http.cookie wildcard r"comment_*")
+
+# --- Laravel ---
+# Admin area (common patterns)
+or (http.request.uri wildcard r"/admin*")
+# Auth/session cookies
+or (http.cookie wildcard r"laravel_session*")
+or (http.cookie wildcard r"XSRF-TOKEN*")
+or (http.cookie wildcard r"remember_web_*")
+
+# --- ASP.NET ---
+# Admin area (common patterns)
+or (http.request.uri wildcard r"/admin*")
+or (http.request.uri wildcard r"/umbraco*")
+# Auth/session cookies
+or (http.cookie wildcard r"ASP.NET_SessionId*")
+or (http.cookie wildcard r".ASPXAUTH*")
+or (http.cookie wildcard r".AspNetCore.*")
+or (http.cookie wildcard r"__RequestVerificationToken*")
+
+# --- Generic Patterns ---
+# Common session/auth/user cookies
+or (http.cookie wildcard r"PHPSESSID*")
+or (http.cookie wildcard r"session*")
+or (http.cookie wildcard r"auth*")
+or (http.cookie wildcard r"token*")
+or (http.cookie wildcard r"user*")

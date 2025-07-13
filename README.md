@@ -13,10 +13,10 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">Cloudflare Smart Cache</h3>
+<h3 align="center">Cloudflare Smart Cache & Bypass Rules</h3>
 
   <p align="center">
-    Powerful all-in-one Cloudflare cache solution for WordPress: edge HTML caching, automatic purging, advanced admin controls, API token support, and comprehensive logging.
+    Advanced Cloudflare cache management for WordPress and web apps: edge HTML caching, automatic purging, admin controls, API token support, and ready-to-use bypass rules for major frameworks.
     <br />
     <a href="https://github.com/LoveDoLove/cloudflare-smart-cache"><strong>Explore the docs »</strong></a>
     <br />
@@ -56,97 +56,71 @@
 
 ## About The Project
 
-Cloudflare Smart Cache is a powerful WordPress plugin and Cloudflare Worker combo that delivers advanced HTML edge caching for your site. It automatically purges cache on post/category changes, provides robust admin controls, supports API tokens, and logs all cache actions. Designed for performance, security, and easy integration with modern WordPress sites.
+[![Product Name Screen Shot][product-screenshot]](https://github.com/LoveDoLove/cloudflare-smart-cache)
 
-- Edge HTML caching via Cloudflare Worker (KV or API)
-- Automatic cache purging on content changes
-- Admin dashboard controls and logging
-- Secure API token support
-- Full uninstall cleanup
+Cloudflare Smart Cache is a powerful, modular solution for advanced cache management on Cloudflare, with a focus on WordPress and major web frameworks. It includes:
+- A WordPress plugin for edge HTML caching, automatic purging, admin controls, API token support, and logging.
+- Ready-to-use Cloudflare cache bypass rules for WordPress, Laravel, ASP.NET, and generic web apps.
+- Legacy Cloudflare Worker scripts (deprecated) for reference and migration.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
-* PHP (WordPress Plugin)
-* JavaScript (Cloudflare Worker)
-* Cloudflare Workers KV/API
-* Wrangler (Cloudflare Worker CLI)
+* [WordPress](https://wordpress.org/)
+* [Cloudflare](https://www.cloudflare.com/)
+* [PHP](https://www.php.net/)
+* [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting Started
 
-Follow these steps to set up Cloudflare Smart Cache for your WordPress site.
+To get started, choose the component that fits your needs:
+- **WordPress users:** Install the plugin from `cf-smart-cache/`.
+- **Cloudflare users:** Use the ready-to-copy rules in `cf-bypass-cache/`.
 
 ### Prerequisites
 
-- WordPress 5.0+ (PHP 7.4+)
-- Cloudflare account with API access
-- Wrangler CLI for deploying workers
+- WordPress 5.0+ (for plugin)
+- PHP 7.4+
+- Cloudflare account (for cache rules)
 
 ### Installation
 
-1. **Clone the repository**
-   ```sh
-   git clone https://github.com/LoveDoLove/cloudflare-smart-cache.git
-   ```
-2. **Install the WordPress Plugin**
-   - Copy the `cf-smart-cache` folder into your WordPress `wp-content/plugins/` directory.
-   - Activate "Cloudflare Smart Cache" from the WordPress admin plugins page.
+#### WordPress Plugin
+1. Download or clone this repository.
+2. Copy the `cf-smart-cache` folder to your WordPress `wp-content/plugins/` directory.
+3. Activate **Cloudflare Smart Cache** from the WordPress admin.
+4. Configure your Cloudflare API token and zone ID in the plugin settings.
 
-3. **Configure Cloudflare Worker**
-   - Install Wrangler:  
-     ```sh
-     npm install -g wrangler
-     ```
-   - Set your Cloudflare credentials in `workers/wrangler.toml`:
-     ```toml
-     [vars]
-     CLOUDFLARE_EMAIL = "your-email@example.com"
-     CLOUDFLARE_API_KEY = "your-global-api-key"
-     CLOUDFLARE_ZONE_ID = "your-zone-id"
-     ```
-   - (Recommended) Bind a KV namespace named `SMART_CACHE` for optimal HTML cache purging.
+#### Cloudflare Bypass Rules
+1. Open the relevant `.rules.md` file in `cf-bypass-cache/`.
+2. Copy the rule block for your framework (WordPress, Laravel, ASP.NET, or all-in-one).
+3. Paste it into the Cloudflare expression builder under Rules > Cache Rules.
+4. Adjust as needed for your environment.
 
-4. **Deploy the Worker**
-   ```sh
-   wrangler publish
-   ```
-
-5. **Configure DNS/Routes**
-   - Set your Cloudflare Worker route to match your WordPress site domain.
-
-6. **Plugin Settings**
-   - Configure plugin options and API tokens in the WordPress admin dashboard.
+#### (Deprecated) Cloudflare Workers
+- See the `workers/DEPRECATED.md` for migration guidance. Do not use for new development.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
 
-- The plugin automatically caches HTML at the edge and purges cache on post/category changes.
-- Admins can manually purge cache or view logs from the WordPress dashboard.
-- The worker bypasses cache for logged-in users, admin paths, and specific cookies.
-- For advanced configuration, edit the worker script or plugin settings as needed.
+- **WordPress:** Enjoy automatic edge HTML caching, purging on post/category changes, and advanced admin controls.
+- **Cloudflare Rules:** Instantly bypass cache for authenticated/admin users with copy-paste rules.
+- **Legacy Workers:** Reference only; see `workers/DEPRECATED.md`.
 
-_See the [Documentation](https://github.com/LoveDoLove/cloudflare-smart-cache) for more details._
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Roadmap
-
-- [ ] Granular cache purging by URL/category
-- [ ] Enhanced analytics and reporting
-- [ ] Multi-site support
-- [ ] UI improvements
-
-See the [open issues](https://github.com/LoveDoLove/cloudflare-smart-cache/issues) for a full list of proposed features (and known issues).
+_For more examples, see the documentation in each subfolder._
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contributing
 
-Contributions are welcome! Please fork the repo and submit a pull request, or open an issue for suggestions.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -170,14 +144,15 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
-LoveDoLove - [@LoveDoLove](https://twitter.com/LoveDoLove)  
+LoveDoLove - [@LoveDoLove](https://github.com/LoveDoLove)
+
 Project Link: [https://github.com/LoveDoLove/cloudflare-smart-cache](https://github.com/LoveDoLove/cloudflare-smart-cache)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Acknowledgments
 
-* [Cloudflare Workers](https://workers.cloudflare.com/)
+* [Cloudflare Docs](https://developers.cloudflare.com/)
 * [WordPress Plugin Handbook](https://developer.wordpress.org/plugins/)
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
 
@@ -195,5 +170,5 @@ Project Link: [https://github.com/LoveDoLove/cloudflare-smart-cache](https://git
 [license-shield]: https://img.shields.io/github/license/LoveDoLove/cloudflare-smart-cache.svg?style=for-the-badge
 [license-url]: https://github.com/LoveDoLove/cloudflare-smart-cache/blob/master/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/lovedolove
-[product-screenshot]: images/screenshot.png
+[linkedin-url]: https://linkedin.com/in/
+[product-screenshot]: images/logo.png
