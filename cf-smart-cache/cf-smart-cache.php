@@ -4,7 +4,7 @@
  * Plugin Slug:       cf-smart-cache
  * Plugin URI:        https://github.com/LoveDoLove/cloudflare-smart-cache
  * Description:       Powerful all-in-one Cloudflare cache solution: edge HTML caching, automatic purging on post/category changes, advanced admin controls, API token support, and comprehensive logging for WordPress.
- * Version:           2.0.1
+ * Version:           2.0.2
  * Author:            LoveDoLove
  * Author URI:        https://github.com/LoveDoLove
  * License:           MIT
@@ -1473,7 +1473,7 @@ add_action('rest_api_init', function ()
 function cf_smart_cache_get_plugin_info()
 {
     return [
-        'version'           => '2.0.1',
+        'version'           => '2.0.2',
         'min_wp_version'    => '5.0',
         'tested_wp_version' => '6.4',
         'min_php_version'   => '7.4',
