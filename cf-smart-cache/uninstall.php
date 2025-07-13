@@ -6,7 +6,7 @@
  * It cleans up all plugin data from the database.
  * 
  * @package CloudflareSmartCache
- * @since 2.0.1
+ * @since 2.0.2
  */
 
 // If uninstall is not called from WordPress, exit
