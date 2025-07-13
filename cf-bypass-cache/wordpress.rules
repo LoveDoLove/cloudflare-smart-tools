@@ -1,0 +1,16 @@
+# Cloudflare Bypass Cache Rules for WordPress Only
+# Focused exclusively on WordPress core and comment cookies.
+# Last reviewed: 2025-07-14
+
+# Bypass for WordPress admin area
+(http.request.uri wildcard r"/wp-admin*")
+
+# Bypass for authenticated/logged-in WordPress users
+or (http.cookie wildcard r"wordpress_logged_in*")
+or (http.cookie wildcard r"wordpress_sec*")
+or (http.cookie wildcard r"wp_postpass*")
+or (http.cookie wildcard r"wp-*")           # All wp- cookies (covers many plugins)
+or (http.cookie wildcard r"wordpress*")     # General catch-all for wordpress cookies
+
+# Bypass for WordPress comment authors
+or (http.cookie wildcard r"comment_*")
