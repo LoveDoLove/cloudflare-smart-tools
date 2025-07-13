@@ -1,8 +1,3 @@
-# All-in-One Cloudflare Bypass Cache Rule (Copy-Paste Friendly)
-
-Copy the entire block below and paste it into the Cloudflare expression builder to bypass cache for authenticated/admin users across WordPress, Laravel, ASP.NET, and common frameworks.
-
-```
 (http.request.uri wildcard "/wp-admin*")
 or (http.request.uri contains "/admin")
 or (http.request.uri contains "/umbraco")
@@ -24,10 +19,3 @@ or (http.cookie contains "session")
 or (http.cookie contains "auth")
 or (http.cookie contains "token")
 or (http.cookie contains "user")
-```
-
-**Instructions:**
-
-- Paste the above block directly into the Cloudflare expression builder.
-- Adjust `contains` or `wildcard` as needed for your specific environment.
-- This rule covers the most common authentication and admin patterns for WordPress, Laravel, ASP.NET, and generic web apps.
