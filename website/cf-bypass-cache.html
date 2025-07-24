@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Bypass Cache | Cloudflare Smart Tools</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <nav class="navbar" id="navbar">
+      <div class="nav-brand">
+        <img src="../images/logo.png" alt="Cloudflare Smart Tools Logo" width="40" height="40" />
+        <span>Cloudflare Smart Tools</span>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span class="hamburger"></span>
+      </button>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="cf-bypass-cache.html" class="active">Bypass Cache</a></li>
+        <li><a href="cf-smart-cache.html">Smart Cache</a></li>
+        <li><a href="cf-smart-cdn-workers.html">Smart CDN Workers</a></li>
+        <li>
+          <a href="cf-smart-cache-workers.html">
+            <span class="deprecated-badge" title="Deprecated module">Smart Cache Workers</span>
+          </a>
+        </li>
+      </ul>
+      <button id="darkModeToggle" aria-label="Toggle dark mode"></button>
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <h1>Cloudflare Bypass Cache Rules</h1>
+      <p>
+        Copy-paste friendly Cloudflare cache bypass rules for WordPress, Laravel, ASP.NET, and generic web apps.
+      </p>
+    </section>
+    <section class="module-content">
+      <h2>About This Module</h2>
+      <p>
+        This project provides a collection of ready-to-use Cloudflare cache bypass rules for popular web frameworks. These rules help ensure dynamic content (such as admin areas, authenticated users, and comment authors) is always served fresh, bypassing Cloudflare's cache when necessary.
+      </p>
+      <ul>
+        <li>WordPress</li>
+        <li>Laravel</li>
+        <li>ASP.NET</li>
+        <li>Generic web apps</li>
+      </ul>
+      <p>
+        Each rule is documented and copy-paste friendly for Cloudflare's expression builder.
+      </p>
+      <h2>Getting Started</h2>
+      <ol>
+        <li>No installation required. Simply copy the desired rule set from the documentation and paste it into your Cloudflare dashboard.</li>
+        <li>Browse the rule sets in this directory:
+          <ul>
+            <li><code>all-in-one-bypass-cache.rules</code></li>
+            <li><code>general-bypass-cache.rules</code></li>
+            <li><code>wordpress.rules</code></li>
+          </ul>
+        </li>
+        <li>Open the corresponding <code>.md</code> file for instructions and copy-paste blocks.</li>
+        <li>Paste the rule into the Cloudflare expression builder under "Cache Rules" or "Page Rules".</li>
+        <li>Adjust <code>contains</code> or <code>wildcard</code> as needed for your environment.</li>
+      </ol>
+      <h2>Usage</h2>
+      <ul>
+        <li>Select the rule set matching your web application.</li>
+        <li>Follow the instructions in the <code>.md</code> documentation files:
+          <ul>
+            <li><code>all-in-one-bypass-cache.rules.md</code></li>
+            <li><code>general-bypass-cache.rules.md</code></li>
+            <li><code>wordpress.rules.md</code></li>
+          </ul>
+        </li>
+        <li>Copy the rule block and paste it into Cloudflare's expression builder.</li>
+        <li>Save and deploy the rule.</li>
+      </ul>
+      <p><em>See documentation files for examples and details.</em></p>
+    </section>
+  </main>
+  <footer>
+    <span>&copy; 2025 Cloudflare Smart Tools. MIT License.</span>
+    <a href="#" id="backToTop" aria-label="Back to top">↑ Back to Top</a>
+  </footer>
+  <script src="main.js"></script>
+</body>
+</html>

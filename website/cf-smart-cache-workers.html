@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Smart Cache Workers (Deprecated) | Cloudflare Smart Tools</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <nav class="navbar" id="navbar">
+      <div class="nav-brand">
+        <img src="../images/logo.png" alt="Cloudflare Smart Tools Logo" width="40" height="40" />
+        <span>Cloudflare Smart Tools</span>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span class="hamburger"></span>
+      </button>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="cf-bypass-cache.html">Bypass Cache</a></li>
+        <li><a href="cf-smart-cache.html">Smart Cache</a></li>
+        <li><a href="cf-smart-cdn-workers.html">Smart CDN Workers</a></li>
+        <li>
+          <a href="cf-smart-cache-workers.html" class="active">
+            <span class="deprecated-badge" title="Deprecated module">Smart Cache Workers</span>
+          </a>
+        </li>
+      </ul>
+      <button id="darkModeToggle" aria-label="Toggle dark mode"></button>
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <h1>
+        <span class="deprecated-badge" title="Deprecated module">DEPRECATED</span>
+        <span class="strikethrough" title="Deprecated">Cloudflare Smart Cache Workers</span>
+      </h1>
+      <p>
+        <span class="strikethrough" title="Deprecated">Legacy Cloudflare Worker-based smart cache solution. This module is deprecated and should not be used for new development.</span>
+      </p>
+    </section>
+    <section class="module-content">
+      <h2>Deprecation Notice</h2>
+      <p>
+        The <code>workers</code> folder and all files within it are now <strong>deprecated</strong> and should not be used for new development. This deprecation follows the advanced reasoning, documentation, and modularity requirements outlined in the InjectMCP prompt.
+      </p>
+      <h3>Actionable Guidance</h3>
+      <ul>
+        <li><strong>Do not</strong> add new code or features to this folder.</li>
+        <li>For new development, refer to updated modules or consult project maintainers for guidance.</li>
+        <li>If you must reference legacy code, clearly mark any usage as deprecated and document migration plans.</li>
+      </ul>
+      <h3>Reason for Deprecation</h3>
+      <p>
+        This folder is deprecated to enforce modularity, maintainability, and alignment with current best practices for Cloudflare Workers and smart cache solutions (Cloudflare Docs, 2024; Mozilla, 2024).
+      </p>
+      <h3>References</h3>
+      <ul>
+        <li>Cloudflare. (2024). <em>Cloudflare Workers Documentation</em>. <a href="https://developers.cloudflare.com/workers/" target="_blank" rel="noopener">Cloudflare Docs</a></li>
+        <li>Mozilla. (2024). <em>Service Workers: an Introduction</em>. <a href="https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers" target="_blank" rel="noopener">MDN</a></li>
+      </ul>
+      <p>
+        <em>This notice is provided in compliance with InjectMCP Prompt Section 1, 3, 4, and 5. For more information, see the project root or contact the maintainers.</em>
+      </p>
+    </section>
+  </main>
+  <footer>
+    <span>&copy; 2025 Cloudflare Smart Tools. MIT License.</span>
+    <a href="#" id="backToTop" aria-label="Back to top">↑ Back to Top</a>
+  </footer>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Cloudflare Smart Tools Documentation</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <nav class="navbar" id="navbar">
+      <div class="nav-brand">
+        <img src="../images/logo.png" alt="Cloudflare Smart Tools Logo" width="40" height="40" />
+        <span>Cloudflare Smart Tools</span>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span class="hamburger"></span>
+      </button>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="cf-bypass-cache.html">Bypass Cache</a></li>
+        <li><a href="cf-smart-cache.html">Smart Cache</a></li>
+        <li><a href="cf-smart-cdn-workers.html">Smart CDN Workers</a></li>
+        <li>
+          <a href="cf-smart-cache-workers.html">
+            <span class="deprecated-badge" title="Deprecated module">Smart Cache Workers</span>
+          </a>
+        </li>
+      </ul>
+      <button id="darkModeToggle" aria-label="Toggle dark mode"></button>
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <h1>Cloudflare Smart Tools Documentation</h1>
+      <p>
+        A suite of modular, copy-paste friendly Cloudflare tools for advanced caching, CDN routing, and cache bypass. 
+        Explore each module for usage instructions, integration guides, and best practices.
+      </p>
+    </section>
+    <section class="modules-overview">
+      <h2>Modules Overview</h2>
+      <div class="modules-list">
+        <div class="module-card">
+          <h3><a href="cf-bypass-cache.html">Bypass Cache</a></h3>
+          <p>Ready-to-use Cloudflare cache bypass rules for WordPress, Laravel, ASP.NET, and generic web apps.</p>
+        </div>
+        <div class="module-card">
+          <h3><a href="cf-smart-cache.html">Smart Cache</a></h3>
+          <p>All-in-one Cloudflare cache solution for WordPress: edge HTML caching, auto purging, admin controls, and analytics.</p>
+        </div>
+        <div class="module-card">
+          <h3><a href="cf-smart-cdn-workers.html">Smart CDN Workers</a></h3>
+          <p>KV-based routing Cloudflare Worker for flexible, dynamic CDN proxying and path-based rules.</p>
+        </div>
+        <div class="module-card deprecated">
+          <h3>
+            <a href="cf-smart-cache-workers.html">
+              <span class="deprecated-badge" title="Deprecated module">Smart Cache Workers</span>
+            </a>
+          </h3>
+          <p><span class="strikethrough" title="Deprecated">Legacy Cloudflare Worker-based smart cache solution. Deprecated in favor of modular approaches.</span></p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <span>&copy; 2025 Cloudflare Smart Tools. MIT License.</span>
+    <a href="#" id="backToTop" aria-label="Back to top">↑ Back to Top</a>
+  </footer>
+  <script src="main.js"></script>
+</body>
+</html>
