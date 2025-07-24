@@ -407,3 +407,6 @@ generate_mcp_yaml.py
 .vscode
 *instructions.md
 BLANK_README.md
+design.md
+tasks.md
+requirements.md
