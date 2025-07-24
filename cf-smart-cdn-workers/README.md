@@ -119,7 +119,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 Author: LoveDoLove
-Project Link: [https://github.com/LoveDoLove/cloudflare-smart-cache](https://github.com/LoveDoLove/cloudflare-smart-cache)
+Project Link: [https://github.com/LoveDoLove/cloudflare-smart-tools](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
 ---
 

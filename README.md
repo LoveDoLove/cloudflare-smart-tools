@@ -9,7 +9,7 @@
 
 <br />
 <div align="center">
-  <a href="https://github.com/LoveDoLove/cloudflare-smart-cache">
+  <a href="https://github.com/LoveDoLove/cloudflare-smart-tools">
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -18,14 +18,14 @@
   <p align="center">
     Advanced Cloudflare cache management for WordPress and web apps: edge HTML caching, automatic purging, admin controls, API token support, and ready-to-use bypass rules for major frameworks.
     <br />
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache">View Demo</a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools">View Demo</a>
     &middot;
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
