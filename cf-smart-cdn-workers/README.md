@@ -1,108 +1,145 @@
-<!-- PROJECT LOGO -->
+<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
+<a id="readme-top"></a>
+
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![License][license-shield]][license-url]
+
 <br />
 <div align="center">
-  <img src="./images/logo.png" alt="Logo" width="80" height="80">
+  <a href="https://github.com/LoveDoLove/cloudflare-smart-tools">
+    <img src="images/logo.png" alt="Logo" width="80" height="80">
+  </a>
+
+<h3 align="center">Cloudflare Smart CDN Workers</h3>
+
+  <p align="center">
+    KV-based routing Cloudflare Worker for flexible CDN proxying.
+    <br />
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools">View Demo</a>
+    &middot;
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    &middot;
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+  </p>
 </div>
 
-# Cloudflare Smart CDN Workers
-
-Cloudflare Smart CDN Workers is a specification-driven, production-ready Cloudflare Worker solution for dynamic routing and proxying requests from your Cloudflare domain to any external domain, even if it is not managed by Cloudflare. Configuration is simple and user-friendly, leveraging Cloudflare KV storage for flexible, code-free routing rules.
-
----
-
-## Table of Contents
-1. [About The Project](#about-the-project)
-2. [Features](#features)
-3. [Architecture](#architecture)
-4. [Getting Started](#getting-started)
-5. [Usage](#usage)
-6. [Error Handling](#error-handling)
-7. [Roadmap](#roadmap)
-8. [Contributing](#contributing)
-9. [License](#license)
-10. [Contact](#contact)
-11. [Acknowledgments](#acknowledgments)
-
----
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ol>
+</details>
 
 ## About The Project
 
-Cloudflare Smart CDN Workers enables seamless routing from your Cloudflare domain to any external domain using KV storage. It is designed for simplicity, maintainability, and extensibility, following best practices and a specification-driven workflow.
+[![Product Name Screen Shot][product-screenshot]](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
----
+Cloudflare Smart CDN Workers is a KV-driven routing solution for Cloudflare Workers. It enables dynamic proxying of requests based on path-to-target mappings stored in the `DOMAIN_ROUTER_KV` namespace. Designed for flexibility, maintainability, and security, it supports error handling and easy rule updates via the Cloudflare dashboard or API.
 
-## Features
-- Route requests from Cloudflare domains to any external domain (not managed by Cloudflare)
-- Simple, code-free configuration via Cloudflare KV (`DOMAIN_ROUTER_KV`)
-- Robust error handling and clear user feedback
-- Proxy fidelity: forwards method, headers, and body
-- Fast, scalable, and production-ready
-- Fully documented and specification-driven
+See [`design.md`](cf-smart-cdn-workers/design.md:1), [`requirements.md`](cf-smart-cdn-workers/requirements.md:1), and [`tasks.md`](cf-smart-cdn-workers/tasks.md:1) for technical details.
 
----
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Architecture
-- Cloudflare Worker receives requests on your domain
-- Worker extracts the request path and looks up the target URL in the `DOMAIN_ROUTER_KV` namespace
-- If a target is found, proxies the request to the external domain, preserving method, headers, and body
-- If not found, returns a clear error message
+### Built With
 
----
+* [Cloudflare Workers](https://workers.cloudflare.com/)
+* [Cloudflare KV](https://developers.cloudflare.com/workers/runtime-apis/kv/)
+* JavaScript (ES2020+)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting Started
 
+To run this project locally or deploy to Cloudflare, follow these steps.
+
 ### Prerequisites
-- Cloudflare account
-- Access to Cloudflare Workers and KV
 
-### Installation & Setup
-1. **Create a KV Namespace**
-   - Name it `DOMAIN_ROUTER_KV` in your Cloudflare account
-   - Bind it to your Worker as `DOMAIN_ROUTER_KV`
-2. **Deploy the Worker**
-   - Upload `worker.js` to your Cloudflare Worker
-   - Bind the KV namespace in your Worker settings
-3. **Configure Routing Rules in KV**
-   - Each key: request path (e.g., `/api/data`)
-   - Each value: full target URL (e.g., `https://external.example.com/api/data`)
-   - Add/update via Cloudflare dashboard or API—no code changes required
+* Cloudflare account
+* Access to Workers and KV namespace
+* [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
 
----
+### Installation
+
+1. Clone the repo
+   ```sh
+   git clone https://github.com/LoveDoLove/cloudflare-smart-tools.git
+   ```
+2. Navigate to the project directory
+   ```sh
+   cd cf-smart-cdn-workers
+   ```
+3. Install Wrangler globally (if not already)
+   ```sh
+   npm install -g wrangler
+   ```
+4. Configure your `wrangler.toml` with your KV namespace:
+   ```toml
+   kv_namespaces = [
+     { binding = "DOMAIN_ROUTER_KV", id = "your_kv_namespace_id" }
+   ]
+   ```
+5. Deploy the worker:
+   ```sh
+   wrangler publish
+   ```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
 
-When a request is received, the Worker looks up the path in `DOMAIN_ROUTER_KV`. If a match is found, the request is proxied to the target URL. If no match is found, a clear error message is returned.
+1. Add routing rules to the `DOMAIN_ROUTER_KV` namespace:
+   - Key: request path (e.g., `/api/data`)
+   - Value: target URL (e.g., `https://external.example.com/api/data`)
+2. Send requests to your Cloudflare Worker endpoint. The worker will proxy requests based on KV rules.
+3. Error responses:
+   - 404: No route configured
+   - 400: Malformed target URL
+   - 502: Proxy failure
 
-#### Example KV Entry
-| Key         | Value                                      |
-|-------------|--------------------------------------------|
-| `/api/data` | `https://external.example.com/api/data`     |
+_Refer to [`worker.js`](cf-smart-cdn-workers/worker.js:1) for implementation details._
 
----
-
-## Error Handling
-- **KV key missing**: Returns 404 error message
-- **Target domain unreachable**: Returns 502 error message
-- **Malformed KV value**: Returns 400 error message
-- **Valid routing**: Returns proxied response
-
----
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Roadmap
-- [x] Dynamic routing via KV
+
+- [x] KV-based routing logic
+- [x] Error handling for missing/malformed KV values
 - [x] Proxy fidelity (method, headers, body)
-- [x] Robust error handling
-- [x] Specification-driven documentation
-- [ ] Advanced pattern matching (wildcards, regex)
-- [ ] Analytics and logging
+- [x] Documentation and design specs
+- [ ] Advanced logging and analytics
 - [ ] UI for rule management
 
-See the [open issues](../../issues) for a full list of proposed features and known issues.
+See [open issues](https://github.com/LoveDoLove/cloudflare-smart-tools/issues) for feature requests and bugs.
 
----
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contributing
-Contributions are welcome! Please fork the repo and create a pull request, or open an issue with suggestions. All improvements and feedback help make the project better for everyone.
+
+Contributions are welcome! Please fork the repo and submit a pull request, or open an issue for suggestions.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -110,20 +147,47 @@ Contributions are welcome! Please fork the repo and create a pull request, or op
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
----
+### Top contributors:
+
+<a href="https://github.com/LoveDoLove/cloudflare-smart-tools/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=LoveDoLove/cloudflare-smart-tools" alt="contrib.rocks image" />
+</a>
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## License
-Distributed under the MIT License. See `LICENSE` for more information.
 
----
+Distributed under the MIT License. See [`LICENSE`](../LICENSE) for details.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contact
-Author: LoveDoLove
+
+LoveDoLove - [@LoveDoLove](https://twitter.com/LoveDoLove) - (add your email here)
+
 Project Link: [https://github.com/LoveDoLove/cloudflare-smart-tools](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
----
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Acknowledgments
-- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
-- [Cloudflare KV Documentation](https://developers.cloudflare.com/workers/runtime-apis/kv/)
-- [Best README Template](https://github.com/othneildrew/Best-README-Template)
+
+* [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+* [Best README Template](https://github.com/othneildrew/Best-README-Template)
+* [contrib.rocks](https://contrib.rocks)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- MARKDOWN LINKS & IMAGES -->
+[contributors-shield]: https://img.shields.io/github/contributors/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
+[contributors-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
+[forks-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/network/members
+[stars-shield]: https://img.shields.io/github/stars/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
+[stars-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/stargazers
+[issues-shield]: https://img.shields.io/github/issues/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
+[issues-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/issues
+[license-shield]: https://img.shields.io/github/license/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
+[license-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/blob/master/LICENSE
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
+[linkedin-url]: https://linkedin.com/in/
+[product-screenshot]: images/logo.png
