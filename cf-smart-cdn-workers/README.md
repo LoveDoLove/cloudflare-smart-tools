@@ -13,10 +13,10 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">Cloudflare Smart Tools</h3>
+<h3 align="center">Cloudflare Smart CDN Workers</h3>
 
   <p align="center">
-    Modular suite for advanced Cloudflare cache management, edge caching, and flexible CDN routing for modern web applications.
+    KV-based routing Cloudflare Worker for flexible CDN proxying.
     <br />
     <a href="https://github.com/LoveDoLove/cloudflare-smart-tools"><strong>Explore the docs »</strong></a>
     <br />
@@ -29,14 +29,12 @@
   </p>
 </div>
 
-<!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
   <ol>
     <li>
       <a href="#about-the-project">About The Project</a>
       <ul>
-        <li><a href="#modules">Modules</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
@@ -60,70 +58,51 @@
 
 [![Product Name Screen Shot][product-screenshot]](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
-Cloudflare Smart Tools is a modular collection for advanced cache management, edge HTML caching, and flexible CDN routing using Cloudflare. It includes:
+Cloudflare Smart CDN Workers is a KV-driven routing solution for Cloudflare Workers. It enables dynamic proxying of requests based on path-to-target mappings stored in the `DOMAIN_ROUTER_KV` namespace. Designed for flexibility, maintainability, and security, it supports error handling and easy rule updates via the Cloudflare dashboard or API.
 
-- **cf-bypass-cache**: Copy-paste friendly Cloudflare cache bypass rules for WordPress, Laravel, ASP.NET, and generic web apps.
-- **cf-smart-cache**: WordPress plugin for edge HTML caching, automatic purging, admin controls, API token support, and logging.
-- **cf-smart-cdn-workers**: KV-based Cloudflare Worker for dynamic CDN proxying and routing.
-- **cf-smart-cache-workers**: Deprecated legacy worker code (see [`DEPRECATED.md`](cf-smart-cache-workers/DEPRECATED.md:1)).
+See [`design.md`](cf-smart-cdn-workers/design.md:1), [`requirements.md`](cf-smart-cdn-workers/requirements.md:1), and [`tasks.md`](cf-smart-cdn-workers/tasks.md:1) for technical details.
 
-### Modules
-
-- [`cf-bypass-cache`](cf-bypass-cache/README.md:1): Cloudflare cache bypass rules and documentation.
-- [`cf-smart-cache`](cf-smart-cache/README.md:1): WordPress plugin for smart cache management.
-- [`cf-smart-cdn-workers`](cf-smart-cdn-workers/README.md:1): CDN proxy worker with KV-based routing.
-- [`cf-smart-cache-workers`](cf-smart-cache-workers/DEPRECATED.md:1): Deprecated worker code.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
-* Cloudflare Workers
-* Cloudflare KV
-* PHP (WordPress)
+* [Cloudflare Workers](https://workers.cloudflare.com/)
+* [Cloudflare KV](https://developers.cloudflare.com/workers/runtime-apis/kv/)
 * JavaScript (ES2020+)
-* Markdown Documentation
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting Started
 
-To use Cloudflare Smart Tools, choose the module(s) that fit your needs:
+To run this project locally or deploy to Cloudflare, follow these steps.
 
 ### Prerequisites
 
-- Cloudflare account
-- Access to Cloudflare dashboard and/or Workers/KV
-- For WordPress plugin: WordPress 5.0+, PHP 7.4+, Cloudflare API Token
+* Cloudflare account
+* Access to Workers and KV namespace
+* [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
 
 ### Installation
 
-#### For Cache Bypass Rules
-
-1. Browse [`cf-bypass-cache`](cf-bypass-cache/README.md:1) for rule sets.
-2. Copy rules from `.rules` and `.md` files.
-3. Paste into Cloudflare dashboard ("Cache Rules" or "Page Rules").
-
-#### For WordPress Smart Cache Plugin
-
-1. Clone the repo:
+1. Clone the repo
    ```sh
    git clone https://github.com/LoveDoLove/cloudflare-smart-tools.git
    ```
-2. Copy `cf-smart-cache` to your WordPress `wp-content/plugins` directory.
-3. Activate via WordPress admin.
-4. Enter Cloudflare API Token and Zone ID in plugin settings.
-
-#### For CDN Worker
-
-1. Navigate to `cf-smart-cdn-workers`:
+2. Navigate to the project directory
    ```sh
    cd cf-smart-cdn-workers
    ```
-2. Install Wrangler CLI:
+3. Install Wrangler globally (if not already)
    ```sh
    npm install -g wrangler
    ```
-3. Configure `wrangler.toml` with your KV namespace.
-4. Deploy:
+4. Configure your `wrangler.toml` with your KV namespace:
+   ```toml
+   kv_namespaces = [
+     { binding = "DOMAIN_ROUTER_KV", id = "your_kv_namespace_id" }
+   ]
+   ```
+5. Deploy the worker:
    ```sh
    wrangler publish
    ```
@@ -132,23 +111,27 @@ To use Cloudflare Smart Tools, choose the module(s) that fit your needs:
 
 ## Usage
 
-- Use cache bypass rules for dynamic content freshness.
-- Manage WordPress cache with smart purging and admin controls.
-- Proxy requests and manage CDN routing with KV-based worker.
-- See module READMEs for detailed usage and examples.
+1. Add routing rules to the `DOMAIN_ROUTER_KV` namespace:
+   - Key: request path (e.g., `/api/data`)
+   - Value: target URL (e.g., `https://external.example.com/api/data`)
+2. Send requests to your Cloudflare Worker endpoint. The worker will proxy requests based on KV rules.
+3. Error responses:
+   - 404: No route configured
+   - 400: Malformed target URL
+   - 502: Proxy failure
+
+_Refer to [`worker.js`](cf-smart-cdn-workers/worker.js:1) for implementation details._
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Roadmap
 
-- [x] Modular cache bypass rules
-- [x] WordPress edge HTML caching plugin
-- [x] KV-based CDN proxy worker
-- [x] Documentation for all modules
-- [ ] REST API cache management
-- [ ] Advanced analytics and logging
+- [x] KV-based routing logic
+- [x] Error handling for missing/malformed KV values
+- [x] Proxy fidelity (method, headers, body)
+- [x] Documentation and design specs
+- [ ] Advanced logging and analytics
 - [ ] UI for rule management
-- [ ] Community contributions
 
 See [open issues](https://github.com/LoveDoLove/cloudflare-smart-tools/issues) for feature requests and bugs.
 
@@ -156,7 +139,7 @@ See [open issues](https://github.com/LoveDoLove/cloudflare-smart-tools/issues) f
 
 ## Contributing
 
-Contributions are welcome! Fork the repo and submit a pull request, or open an issue for suggestions.
+Contributions are welcome! Please fork the repo and submit a pull request, or open an issue for suggestions.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -174,24 +157,23 @@ Contributions are welcome! Fork the repo and submit a pull request, or open an i
 
 ## License
 
-Distributed under the MIT License. See [`LICENSE`](LICENSE:1) for details.
+Distributed under the MIT License. See [`LICENSE`](../LICENSE) for details.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contact
 
-LoveDoLove - [@LoveDoLove](https://twitter.com/LoveDoLove)  
+LoveDoLove - [@LoveDoLove](https://twitter.com/LoveDoLove) - (add your email here)
+
 Project Link: [https://github.com/LoveDoLove/cloudflare-smart-tools](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Acknowledgments
 
-* [Cloudflare Documentation](https://developers.cloudflare.com/)
-* [WordPress Plugin Handbook](https://developer.wordpress.org/plugins/)
+* [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
 * [Best README Template](https://github.com/othneildrew/Best-README-Template)
 * [contrib.rocks](https://contrib.rocks)
-* Community contributors
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

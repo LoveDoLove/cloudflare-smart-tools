@@ -5,7 +5,7 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![License][license-shield]][license-url]
+[![MIT License][license-shield]][license-url]
 
 <br />
 <div align="center">
@@ -13,10 +13,10 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">Cloudflare Smart Tools</h3>
+<h3 align="center">Cloudflare Smart Cache</h3>
 
   <p align="center">
-    Modular suite for advanced Cloudflare cache management, edge caching, and flexible CDN routing for modern web applications.
+    Powerful all-in-one Cloudflare cache solution for WordPress: edge HTML caching, automatic purging, advanced admin controls, API token support, and comprehensive logging.
     <br />
     <a href="https://github.com/LoveDoLove/cloudflare-smart-tools"><strong>Explore the docs »</strong></a>
     <br />
@@ -36,7 +36,6 @@
     <li>
       <a href="#about-the-project">About The Project</a>
       <ul>
-        <li><a href="#modules">Modules</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
@@ -60,103 +59,74 @@
 
 [![Product Name Screen Shot][product-screenshot]](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
-Cloudflare Smart Tools is a modular collection for advanced cache management, edge HTML caching, and flexible CDN routing using Cloudflare. It includes:
+Cloudflare Smart Cache is a WordPress plugin that provides a robust edge HTML caching solution using Cloudflare. It automatically purges cache on post, category, and comment changes, offers advanced admin controls, supports secure API token authentication, and includes comprehensive logging and analytics. Designed for security and performance, it integrates seamlessly with Cloudflare Workers and follows best practices for WordPress and Cloudflare API usage.
 
-- **cf-bypass-cache**: Copy-paste friendly Cloudflare cache bypass rules for WordPress, Laravel, ASP.NET, and generic web apps.
-- **cf-smart-cache**: WordPress plugin for edge HTML caching, automatic purging, admin controls, API token support, and logging.
-- **cf-smart-cdn-workers**: KV-based Cloudflare Worker for dynamic CDN proxying and routing.
-- **cf-smart-cache-workers**: Deprecated legacy worker code (see [`DEPRECATED.md`](cf-smart-cache-workers/DEPRECATED.md:1)).
-
-### Modules
-
-- [`cf-bypass-cache`](cf-bypass-cache/README.md:1): Cloudflare cache bypass rules and documentation.
-- [`cf-smart-cache`](cf-smart-cache/README.md:1): WordPress plugin for smart cache management.
-- [`cf-smart-cdn-workers`](cf-smart-cdn-workers/README.md:1): CDN proxy worker with KV-based routing.
-- [`cf-smart-cache-workers`](cf-smart-cache-workers/DEPRECATED.md:1): Deprecated worker code.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
-* Cloudflare Workers
-* Cloudflare KV
-* PHP (WordPress)
-* JavaScript (ES2020+)
-* Markdown Documentation
+* PHP (WordPress Plugin)
+* [Cloudflare API](https://api.cloudflare.com/)
+* [Cloudflare Workers](https://workers.cloudflare.com/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting Started
 
-To use Cloudflare Smart Tools, choose the module(s) that fit your needs:
+To set up Cloudflare Smart Cache locally:
 
 ### Prerequisites
 
-- Cloudflare account
-- Access to Cloudflare dashboard and/or Workers/KV
-- For WordPress plugin: WordPress 5.0+, PHP 7.4+, Cloudflare API Token
+* WordPress 5.0 or higher
+* PHP 7.4 or higher
+* Cloudflare account with API Token (recommended) or Global API Key
 
 ### Installation
-
-#### For Cache Bypass Rules
-
-1. Browse [`cf-bypass-cache`](cf-bypass-cache/README.md:1) for rule sets.
-2. Copy rules from `.rules` and `.md` files.
-3. Paste into Cloudflare dashboard ("Cache Rules" or "Page Rules").
-
-#### For WordPress Smart Cache Plugin
 
 1. Clone the repo:
    ```sh
    git clone https://github.com/LoveDoLove/cloudflare-smart-tools.git
    ```
-2. Copy `cf-smart-cache` to your WordPress `wp-content/plugins` directory.
-3. Activate via WordPress admin.
-4. Enter Cloudflare API Token and Zone ID in plugin settings.
-
-#### For CDN Worker
-
-1. Navigate to `cf-smart-cdn-workers`:
-   ```sh
-   cd cf-smart-cdn-workers
-   ```
-2. Install Wrangler CLI:
-   ```sh
-   npm install -g wrangler
-   ```
-3. Configure `wrangler.toml` with your KV namespace.
-4. Deploy:
-   ```sh
-   wrangler publish
-   ```
+2. Copy the `cf-smart-cache` folder into your WordPress `wp-content/plugins` directory.
+3. Activate the plugin from the WordPress admin dashboard.
+4. Go to **Settings > CF Smart Cache** and enter your Cloudflare API Token and Zone ID.
+5. (Optional) Configure bypass cookie prefixes to match your Cloudflare Worker configuration.
+6. Save settings and verify cache status.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
 
-- Use cache bypass rules for dynamic content freshness.
-- Manage WordPress cache with smart purging and admin controls.
-- Proxy requests and manage CDN routing with KV-based worker.
-- See module READMEs for detailed usage and examples.
+- Automatic cache purging on post, category, comment, and taxonomy changes.
+- Manual cache controls via the admin settings page (purge all, purge homepage).
+- Advanced admin toolbar integration for quick cache actions.
+- Batch purging to avoid API rate limits.
+- Comprehensive logging and cache analytics.
+- Security headers and bypass logic for private/admin pages.
+- Export bypass cookie prefixes for Worker integration.
+
+_Refer to the plugin settings page and inline documentation for details._
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Roadmap
 
-- [x] Modular cache bypass rules
-- [x] WordPress edge HTML caching plugin
-- [x] KV-based CDN proxy worker
-- [x] Documentation for all modules
+- [x] Edge HTML caching with Cloudflare Worker integration
+- [x] Automatic cache purging on content changes
+- [x] API token authentication
+- [x] Advanced admin controls and logging
+- [x] Batch processing and rate limiting
 - [ ] REST API cache management
-- [ ] Advanced analytics and logging
-- [ ] UI for rule management
-- [ ] Community contributions
+- [ ] Enhanced analytics dashboard
+- [ ] Multisite support
 
-See [open issues](https://github.com/LoveDoLove/cloudflare-smart-tools/issues) for feature requests and bugs.
+See the [open issues](https://github.com/LoveDoLove/cloudflare-smart-tools/issues) for a full list of proposed features and known issues.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contributing
 
-Contributions are welcome! Fork the repo and submit a pull request, or open an issue for suggestions.
+Contributions are welcome! Please fork the repo and submit a pull request, or open an issue for suggestions.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -164,34 +134,33 @@ Contributions are welcome! Fork the repo and submit a pull request, or open an i
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ### Top contributors:
 
 <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=LoveDoLove/cloudflare-smart-tools" alt="contrib.rocks image" />
 </a>
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 ## License
 
-Distributed under the MIT License. See [`LICENSE`](LICENSE:1) for details.
+Distributed under the MIT License. See [`LICENSE`](../LICENSE) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contact
 
-LoveDoLove - [@LoveDoLove](https://twitter.com/LoveDoLove)  
+LoveDoLove - [@LoveDoLove](https://github.com/LoveDoLove)
+
 Project Link: [https://github.com/LoveDoLove/cloudflare-smart-tools](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Acknowledgments
 
-* [Cloudflare Documentation](https://developers.cloudflare.com/)
 * [WordPress Plugin Handbook](https://developer.wordpress.org/plugins/)
+* [Cloudflare API Docs](https://api.cloudflare.com/)
 * [Best README Template](https://github.com/othneildrew/Best-README-Template)
-* [contrib.rocks](https://contrib.rocks)
-* Community contributors
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
