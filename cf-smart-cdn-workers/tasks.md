@@ -3,7 +3,7 @@
 ## Tasks
 
 1. **Update Worker Script**
-   - Refactor `worker.js` to read routing rules from `ROUTES_KV` and proxy requests.
+   - Refactor `worker.js` to read routing rules from `DOMAIN_ROUTER_KV` and proxy requests.
    - Add error handling for missing/malformed KV values and proxy failures.
    - Add comments explaining intent and usage.
    - Status: Complete
@@ -30,7 +30,7 @@
 
 ## Dependencies
 - Cloudflare Worker runtime
-- KV namespace (`ROUTES_KV`)
+- KV namespace (`DOMAIN_ROUTER_KV`)
 - Cloudflare dashboard/API for user configuration
 
 ## Traceability

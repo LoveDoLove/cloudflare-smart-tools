@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 - Cloudflare Worker receives requests on a Cloudflare domain.
-- Worker extracts the request path and looks up the target URL in the `ROUTES_KV` namespace.
+- Worker extracts the request path and looks up the target URL in the `DOMAIN_ROUTER_KV` namespace.
 - If a target is found, the Worker proxies the request to the external domain, preserving method, headers, and body.
 - If not found, returns a clear error message.
 
@@ -10,7 +10,7 @@
 1. [Request] → [Worker] → [KV Lookup: path] → [Proxy to target] → [Response]
 
 ## Interfaces
-- **KV Namespace**: `ROUTES_KV`
+- **KV Namespace**: `DOMAIN_ROUTER_KV`
   - Key: request path (e.g., `/api/data`)
   - Value: target URL (e.g., `https://external.example.com/api/data`)
 - **Worker API**: Standard Cloudflare Worker fetch event.
@@ -31,6 +31,8 @@
 - Test missing KV key.
 - Test unreachable target.
 - Test malformed KV value.
+- Test proxy fidelity (method, headers, body forwarded).
+- Test fetch timeout and error handling.
 
 ## Maintainability & Security
 - Code is concise, readable, and well-commented.
