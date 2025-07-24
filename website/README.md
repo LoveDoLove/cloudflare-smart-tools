@@ -1,3 +1,17 @@
+# Cloudflare Smart Tools Documentation
+
+Welcome to the documentation site for the Cloudflare Smart Tools project suite. This site provides modular, up-to-date documentation for all subprojects, following best practices for clarity, modularity, and citation ([Bomberbot, 2024]; [Parks, 2024]; [Sheridan, 2024]).
+
+## Projects
+
+- [Bypass Cache](bypass-cache.md): Rules and usage for bypassing Cloudflare cache.
+- [Smart Cache](smart-cache.md): WordPress plugin for cache optimization.
+- [Smart Cache Workers](smart-cache-workers.md): JavaScript Workers for advanced cache control.
+- [Smart CDN Workers](smart-cdn-workers.md): CDN optimization and custom logic.
+
+## References
+
+See [References](references.md) for all external sources in APA 7th format.
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
 <a id="readme-top"></a>
 
