@@ -1,6 +1,0 @@
-* [Home](/)
-* [Bypass Cache](bypass-cache.md)
-* [Smart Cache](smart-cache.md)
-* [Smart Cache Workers](smart-cache-workers.md)
-* [Smart CDN Workers](smart-cdn-workers.md)
-* [References](references.md)
