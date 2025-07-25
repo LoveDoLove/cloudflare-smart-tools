@@ -23,13 +23,27 @@ A complete set of cache bypass rules that covers most common scenarios across di
 
 ```cloudflare
 # All-in-One Cache Bypass Rules
-(http.request.uri.path contains "/admin" or 
- http.request.uri.path contains "/wp-admin" or 
- http.request.uri.path contains "/login" or 
- http.request.uri.path contains "/wp-login" or 
- http.request.uri.query contains "preview=true" or 
- http.cookie contains "wordpress_logged_in" or 
- http.cookie contains "comment_author")
+(http.request.uri wildcard "/wp-admin*")
+or (http.request.uri contains "/admin")
+or (http.request.uri contains "/umbraco")
+or (http.cookie contains "wordpress_logged_in")
+or (http.cookie contains "wordpress_sec")
+or (http.cookie contains "wp_postpass")
+or (http.cookie contains "wp-")
+or (http.cookie contains "wordpress")
+or (http.cookie contains "comment_")
+or (http.cookie contains "laravel_session")
+or (http.cookie contains "XSRF-TOKEN")
+or (http.cookie contains "remember_web_")
+or (http.cookie contains "ASP.NET_SessionId")
+or (http.cookie contains ".ASPXAUTH")
+or (http.cookie contains ".AspNetCore.")
+or (http.cookie contains "__RequestVerificationToken")
+or (http.cookie contains "PHPSESSID")
+or (http.cookie contains "session")
+or (http.cookie contains "auth")
+or (http.cookie contains "token")
+or (http.cookie contains "user")
 ```
 
 **Use Cases:**
