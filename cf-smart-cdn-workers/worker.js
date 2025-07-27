@@ -5,15 +5,15 @@
 // REPLACE_DOMAIN = "yoursite.com"
 
 addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request, event));
+  event.respondWith(handleRequest(event.request, env));
 });
 
-async function handleRequest(request, event) {
+async function handleRequest(request, env) {
   const url = new URL(request.url);
 
   // Use environment variable for the target domain
-  const targetDomain = typeof TARGET_DOMAIN !== 'undefined' ? TARGET_DOMAIN : 'example.com';
-  const replaceDomain = typeof REPLACE_DOMAIN !== 'undefined' ? REPLACE_DOMAIN : 'yoursite.com';
+  const targetDomain = env && env.TARGET_DOMAIN ? env.TARGET_DOMAIN : 'example.com';
+  const replaceDomain = env && env.REPLACE_DOMAIN ? env.REPLACE_DOMAIN : 'yoursite.com';
   const targetUrl = `https://${targetDomain}${url.pathname}`;
 
   // Create a new request to the target server
