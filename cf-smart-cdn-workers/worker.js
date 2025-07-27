@@ -1,50 +1,49 @@
-export default {
-  async fetch(request, env) {
-    // Direct proxy: forward request to the same path on the target domain
-    // Assume env.TARGET_DOMAIN is set to the base URL (e.g., 'https://example.com')
-    const url = new URL(request.url);
-    const targetDomain = env.TARGET_DOMAIN;
-    if (!targetDomain) {
-      return new Response(
-        JSON.stringify({ error: 'No TARGET_DOMAIN configured in environment' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-    let proxyUrl;
-    try {
-      proxyUrl = new URL(url.pathname + url.search, targetDomain);
-    } catch (err) {
-      return new Response(
-        JSON.stringify({ error: 'Malformed TARGET_DOMAIN', details: targetDomain }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-    // Forward method, headers, and body for all HTTP methods
-    // Clone the request to ensure the body is readable
-    let proxyRequestInit = {
-      method: request.method,
-      headers: request.headers,
-      redirect: 'manual',
-    };
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      // Read the body as a stream or ArrayBuffer
-      proxyRequestInit.body = request.body ? request.body : await request.clone().arrayBuffer();
-    }
-    const proxyRequest = new Request(proxyUrl.toString(), proxyRequestInit);
-    // Add timeout for fetch (Cloudflare Workers: AbortController)
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
-    let response;
-    try {
-      response = await fetch(proxyRequest, { signal: controller.signal });
-      clearTimeout(timeout);
-      return response;
-    } catch (err) {
-      clearTimeout(timeout);
-      return new Response(
-        JSON.stringify({ error: 'Failed to proxy request' }),
-        { status: 502, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+// To use environment variables in Cloudflare Workers, define them in wrangler.toml under [vars]
+// Example:
+// [vars]
+// TARGET_DOMAIN = "example.com"
+// REPLACE_DOMAIN = "yoursite.com"
+
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request, event));
+});
+
+async function handleRequest(request, event) {
+  const url = new URL(request.url);
+
+  // Use environment variable for the target domain
+  const targetDomain = typeof TARGET_DOMAIN !== 'undefined' ? TARGET_DOMAIN : 'example.com';
+  const replaceDomain = typeof REPLACE_DOMAIN !== 'undefined' ? REPLACE_DOMAIN : 'yoursite.com';
+  const targetUrl = `https://${targetDomain}${url.pathname}`;
+
+  // 创建一个新的请求
+  const modifiedRequest = new Request(targetUrl, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    redirect: 'follow'
+  });
+
+  // 获取目标服务器的响应
+  let response = await fetch(modifiedRequest);
+
+  // 检查响应类型并重写内容
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('text/html') || contentType.includes('text/css') || contentType.includes('application/javascript')) {
+    // 将响应内容转为文本
+    let text = await response.text();
+
+    // 替换内容：将 targetDomain 替换为 replaceDomain
+    const regex = new RegExp(targetDomain.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), 'g');
+    text = text.replace(regex, replaceDomain);
+
+    // 返回修改后的响应
+    return new Response(text, {
+      status: response.status,
+      headers: response.headers
+    });
   }
+
+  // 如果不是需要重写的类型，则直接返回原始响应
+  return response;
 }
