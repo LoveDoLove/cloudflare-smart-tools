@@ -16,7 +16,7 @@ async function handleRequest(request, event) {
   const replaceDomain = typeof REPLACE_DOMAIN !== 'undefined' ? REPLACE_DOMAIN : 'yoursite.com';
   const targetUrl = `https://${targetDomain}${url.pathname}`;
 
-  // 创建一个新的请求
+  // Create a new request to the target server
   const modifiedRequest = new Request(targetUrl, {
     method: request.method,
     headers: request.headers,
@@ -24,26 +24,26 @@ async function handleRequest(request, event) {
     redirect: 'follow'
   });
 
-  // 获取目标服务器的响应
+  // Get the response from the target server
   let response = await fetch(modifiedRequest);
 
-  // 检查响应类型并重写内容
+  // Check response type and rewrite content if needed
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('text/html') || contentType.includes('text/css') || contentType.includes('application/javascript')) {
-    // 将响应内容转为文本
+    // Convert response content to text
     let text = await response.text();
 
-    // 替换内容：将 targetDomain 替换为 replaceDomain
+    // Replace content: replace targetDomain with replaceDomain
     const regex = new RegExp(targetDomain.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), 'g');
     text = text.replace(regex, replaceDomain);
 
-    // 返回修改后的响应
+    // Return the modified response
     return new Response(text, {
       status: response.status,
       headers: response.headers
     });
   }
 
-  // 如果不是需要重写的类型，则直接返回原始响应
+  // If not a type that needs rewriting, return the original response
   return response;
 }
