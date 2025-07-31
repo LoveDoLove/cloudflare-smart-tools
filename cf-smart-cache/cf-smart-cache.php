@@ -4,7 +4,7 @@
  * Plugin Slug:       cf-smart-cache
  * Plugin URI:        https://github.com/LoveDoLove/cloudflare-smart-cache
  * Description:       Powerful all-in-one Cloudflare cache solution: edge HTML caching, automatic purging on post/category changes, advanced admin controls, API token support, and comprehensive logging for WordPress.
- * Version:           2.0.3
+ * Version:           2.0.5
  * Author:            LoveDoLove
  * Author URI:        https://github.com/LoveDoLove
  * License:           MIT
@@ -344,49 +344,22 @@ function cf_smart_cache_set_edge_headers()
         return;
     }
 
-    $settings       = get_option('cf_smart_cache_settings');
-    $bypass_cookies = isset($settings['cf_smart_cache_bypass_cookies']) && strlen($settings['cf_smart_cache_bypass_cookies']) > 0
-        ? array_map('trim', explode(',', $settings['cf_smart_cache_bypass_cookies']))
-        : [
-            'wordpress_logged_in',
-            'wp-',
-            'wordpress_sec',
-            'woocommerce_',
-            'PHPSESSID',
-            'session',
-            'auth',
-            'token',
-            'user',
-            'wordpress',
-            'comment_',
-            'wp_postpass',
-            'edd_',
-            'memberpress_',
-            'wpsc_',
-            'wc_',
-            'jevents_'
-        ];
-    $bypass_string  = implode('|', $bypass_cookies);
-
-    // Add security headers for cached pages
+    // Remove bypass cookie logic
     cf_smart_cache_add_security_headers();
-    // Add plugin debug header for transparency (always set)
     header('x-HTML-Edge-Cache-Plugin: active');
     header('x-HTML-Edge-Cache-Debug: cache=public');
-
-    // Set appropriate cache headers based on page type
     if (is_front_page() || is_home()) {
-        header("x-HTML-Edge-Cache: cache,bypass-cookies={$bypass_string}");
+        header('x-HTML-Edge-Cache: cache');
         header('Cache-Control: public, max-age=3600, s-maxage=7200');
     } elseif (is_single() || is_page()) {
-        header("x-HTML-Edge-Cache: cache,bypass-cookies={$bypass_string}");
+        header('x-HTML-Edge-Cache: cache');
         header('Cache-Control: public, max-age=7200, s-maxage=14400');
     } else {
-        header("x-HTML-Edge-Cache: cache,bypass-cookies={$bypass_string}");
+        header('x-HTML-Edge-Cache: cache');
         header('Cache-Control: public, max-age=1800, s-maxage=3600');
     }
 
-    cf_smart_cache_log('Edge caching enabled with cookie bypass and security headers');
+    cf_smart_cache_log('Edge caching enabled with security headers');
 }
 
 /**
@@ -484,20 +457,6 @@ function cf_smart_cache_settings_init()
         'cf_smart_cache',
         'cf_smart_cache_api_section'
     );
-    // Add bypass cookie list setting
-    add_settings_section(
-        'cf_smart_cache_bypass_section',
-        __('Cache Bypass Cookie Prefixes', 'cf-smart-cache'),
-        null,
-        'cf_smart_cache'
-    );
-    add_settings_field(
-        'cf_smart_cache_bypass_cookies',
-        __('Bypass Cookie Prefixes (comma-separated)', 'cf-smart-cache'),
-        'cf_smart_cache_bypass_cookies_render',
-        'cf_smart_cache',
-        'cf_smart_cache_bypass_section'
-    );
 }
 
 /**
@@ -525,12 +484,6 @@ function cf_smart_cache_sanitize_settings($input)
     // Sanitize zone ID
     if (isset($input['cf_smart_cache_zone_id'])) {
         $sanitized['cf_smart_cache_zone_id'] = sanitize_text_field($input['cf_smart_cache_zone_id']);
-    }
-    // Sanitize bypass cookie list
-    if (isset($input['cf_smart_cache_bypass_cookies'])) {
-        $raw                                        = $input['cf_smart_cache_bypass_cookies'];
-        $arr                                        = array_filter(array_map('trim', explode(',', $raw)));
-        $sanitized['cf_smart_cache_bypass_cookies'] = implode(',', $arr);
     }
 
     /**
@@ -663,23 +616,6 @@ function cf_smart_cache_zone_id_render()
         ' <a href="%s">%s</a>',
         esc_url($refresh_url),
         esc_html__('Refresh List', 'cf-smart-cache')
-    );
-}
-
-// Render bypass cookie list field
-function cf_smart_cache_bypass_cookies_render()
-{
-    $options = get_option('cf_smart_cache_settings', []);
-    $value   = isset($options['cf_smart_cache_bypass_cookies']) ? esc_attr($options['cf_smart_cache_bypass_cookies']) : '';
-
-    printf(
-        '<input type="text" name="cf_smart_cache_settings[cf_smart_cache_bypass_cookies]" value="%s" class="regular-text">',
-        $value
-    );
-    printf(
-        '<p class="description">%s <strong>%s</strong></p>',
-        esc_html__('Comma-separated list of cookie name prefixes that will trigger cache bypass.', 'cf-smart-cache'),
-        esc_html__('This list must match the Worker configuration.', 'cf-smart-cache')
     );
 }
 function cf_smart_cache_options_page_html()
@@ -1498,81 +1434,6 @@ function cf_smart_cache_get_plugin_info()
     ];
 }
 
-add_action('admin_notices', function ()
-{
-    // Only show on our plugin's admin page
-    if (!isset($_GET['page']) || $_GET['page'] !== 'cf_smart_cache') {
-        return;
-    }
-
-    // Check user capability
-    if (!current_user_can('manage_options')) {
-        return;
-    }
-
-    $export_url = esc_url(admin_url('admin.php?page=cf_smart_cache_export_bypass_cookies'));
-
-    printf(
-        '<div class="notice notice-warning"><p><strong>%s:</strong> %s <a href="%s" target="_blank">%s</a>. <br>%s <br><b>%s</b></p></div>',
-        esc_html__('Cloudflare Smart Cache', 'cf-smart-cache'),
-        esc_html__('The Bypass Cookie Prefixes list must match the configuration in your Cloudflare Worker (LOGIN_COOKIE_PREFIXES).', 'cf-smart-cache'),
-        $export_url,
-        esc_html__('Export as JSON for Worker', 'cf-smart-cache'),
-        esc_html__('If you update this list, you must redeploy your Worker with the new list for security.', 'cf-smart-cache'),
-        esc_html__('Failure to do so can result in private/admin content being cached and leaked to anonymous users!', 'cf-smart-cache')
-    );
-});
-
-// Export bypass cookie prefix list as JSON for Worker with improved security
-function cf_smart_cache_export_bypass_cookies_page()
-{
-    // Check user capability
-    if (!current_user_can('manage_options')) {
-        wp_die(__('You do not have sufficient permissions to access this page.', 'cf-smart-cache'));
-    }
-
-    $options     = get_option('cf_smart_cache_settings', []);
-    $cookie_list = isset($options['cf_smart_cache_bypass_cookies']) && !empty($options['cf_smart_cache_bypass_cookies'])
-        ? array_filter(array_map('trim', explode(',', $options['cf_smart_cache_bypass_cookies'])))
-        : [
-            'wordpress_logged_in',
-            'wp-',
-            'wordpress_sec',
-            'woocommerce_',
-            'PHPSESSID',
-            'session',
-            'auth',
-            'token',
-            'user',
-            'wordpress',
-            'comment_',
-            'wp_postpass',
-            'edd_',
-            'memberpress_',
-            'wpsc_',
-            'wc_',
-            'jevents_'
-        ];
-
-    $json = wp_json_encode($cookie_list, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-    printf('<div class="wrap"><h1>%s</h1>', esc_html__('Export Bypass Cookie Prefixes for Worker', 'cf-smart-cache'));
-    printf('<p>%s <code>LOGIN_COOKIE_PREFIXES</code>:</p>', esc_html__('Copy the following JSON array and paste it into your Worker as', 'cf-smart-cache'));
-    printf('<textarea rows="10" cols="80" readonly>%s</textarea>', esc_textarea($json));
-    printf('<p><a href="%s">%s</a></p>', esc_url(admin_url('options-general.php?page=cf_smart_cache')), esc_html__('Back to Settings', 'cf-smart-cache'));
-    echo '</div>';
-}
-add_action('admin_menu', function ()
-{
-    add_submenu_page(
-        null,
-        'Export Bypass Cookie Prefixes',
-        'Export Bypass Cookie Prefixes',
-        'manage_options',
-        'cf_smart_cache_export_bypass_cookies',
-        'cf_smart_cache_export_bypass_cookies_page'
-    );
-});
 // ===================== Admin Notice for Missing Config =====================
 add_action('admin_notices', function ()
 {
