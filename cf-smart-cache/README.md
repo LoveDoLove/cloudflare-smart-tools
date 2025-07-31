@@ -16,7 +16,8 @@
 <h3 align="center">Cloudflare Smart Cache</h3>
 
   <p align="center">
-    Powerful all-in-one Cloudflare cache solution for WordPress: edge HTML caching, automatic purging, advanced admin controls, API token support, and comprehensive logging.
+    <strong>Powerful all-in-one Cloudflare cache solution for WordPress</strong><br>
+    Edge HTML caching, automatic purging, advanced admin controls, API token support, and comprehensive logging.<br>
     <br />
     <a href="https://github.com/LoveDoLove/cloudflare-smart-tools"><strong>Explore the docs »</strong></a>
     <br />
@@ -29,23 +30,15 @@
   </p>
 </div>
 
+
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
+    <li><a href="#about-the-project">About The Project</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#built-with">Built With</a></li>
+    <li><a href="#getting-started">Getting Started</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
@@ -55,35 +48,52 @@
   </ol>
 </details>
 
+
 ## About The Project
 
 [![Product Name Screen Shot][product-screenshot]](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
-Cloudflare Smart Cache is a WordPress plugin that provides a robust edge HTML caching solution using Cloudflare. It automatically purges cache on post, category, and comment changes, offers advanced admin controls, supports secure API token authentication, and includes comprehensive logging and analytics. Designed for security and performance, it integrates seamlessly with Cloudflare Workers and follows best practices for WordPress and Cloudflare API usage.
+Cloudflare Smart Cache is a WordPress plugin designed to supercharge your website’s performance and security by leveraging Cloudflare’s edge HTML caching. It provides automatic cache purging on post, category, and comment changes, advanced admin controls, secure API token authentication, and comprehensive logging and analytics. The plugin integrates seamlessly with Cloudflare Workers and is built for reliability, scalability, and ease of use.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Built With
+## Features
 
-* PHP (WordPress Plugin)
-* [Cloudflare API](https://api.cloudflare.com/)
-* [Cloudflare Workers](https://workers.cloudflare.com/)
+- Edge HTML caching with Cloudflare Worker integration
+- Automatic cache purging on post, category, comment, and taxonomy changes
+- Advanced admin controls and logging
+- API token authentication for secure Cloudflare API access
+- Batch processing and rate limiting to avoid API limits
+- Manual cache controls (purge all, purge homepage)
+- Admin toolbar integration for quick cache actions
+- Security headers and bypass logic for private/admin pages
+- Export bypass cookie prefixes for Worker integration
+- Comprehensive logging and cache analytics
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Built With
+
+- PHP (WordPress Plugin)
+- [Cloudflare API](https://api.cloudflare.com/)
+- [Cloudflare Workers](https://workers.cloudflare.com/)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 ## Getting Started
 
-To set up Cloudflare Smart Cache locally:
+Follow these steps to set up Cloudflare Smart Cache locally:
 
 ### Prerequisites
 
-* WordPress 5.0 or higher
-* PHP 7.4 or higher
-* Cloudflare account with API Token (recommended) or Global API Key
+- WordPress 5.0 or higher
+- PHP 7.4 or higher
+- Cloudflare account with API Token (recommended) or Global API Key
 
 ### Installation
 
-1. Clone the repo:
+1. Clone the repository:
    ```sh
    git clone https://github.com/LoveDoLove/cloudflare-smart-tools.git
    ```
@@ -95,19 +105,23 @@ To set up Cloudflare Smart Cache locally:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+
 ## Usage
 
-- Automatic cache purging on post, category, comment, and taxonomy changes.
-- Manual cache controls via the admin settings page (purge all, purge homepage).
-- Advanced admin toolbar integration for quick cache actions.
-- Batch purging to avoid API rate limits.
-- Comprehensive logging and cache analytics.
-- Security headers and bypass logic for private/admin pages.
-- Export bypass cookie prefixes for Worker integration.
+After installation and setup, you can:
 
-_Refer to the plugin settings page and inline documentation for details._
+- Enjoy automatic cache purging on post, category, comment, and taxonomy changes
+- Use manual cache controls via the admin settings page (purge all, purge homepage)
+- Access advanced admin toolbar integration for quick cache actions
+- Monitor batch purging to avoid API rate limits
+- View comprehensive logging and cache analytics
+- Benefit from security headers and bypass logic for private/admin pages
+- Export bypass cookie prefixes for Worker integration
+
+_Refer to the plugin settings page and inline documentation for more details and advanced configuration._
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 ## Roadmap
 
@@ -124,9 +138,13 @@ See the [open issues](https://github.com/LoveDoLove/cloudflare-smart-tools/issue
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+
 ## Contributing
 
-Contributions are welcome! Please fork the repo and submit a pull request, or open an issue for suggestions.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -142,11 +160,13 @@ Contributions are welcome! Please fork the repo and submit a pull request, or op
   <img src="https://contrib.rocks/image?repo=LoveDoLove/cloudflare-smart-tools" alt="contrib.rocks image" />
 </a>
 
+
 ## License
 
 Distributed under the MIT License. See [`LICENSE`](../LICENSE) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 ## Contact
 
@@ -155,6 +175,7 @@ LoveDoLove - [@LoveDoLove](https://github.com/LoveDoLove)
 Project Link: [https://github.com/LoveDoLove/cloudflare-smart-tools](https://github.com/LoveDoLove/cloudflare-smart-tools)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 ## Acknowledgments
 
