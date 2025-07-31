@@ -1498,81 +1498,9 @@ function cf_smart_cache_get_plugin_info()
     ];
 }
 
-add_action('admin_notices', function ()
-{
-    // Only show on our plugin's admin page
-    if (!isset($_GET['page']) || $_GET['page'] !== 'cf_smart_cache') {
-        return;
-    }
+// ...existing code...
 
-    // Check user capability
-    if (!current_user_can('manage_options')) {
-        return;
-    }
-
-    $export_url = esc_url(admin_url('admin.php?page=cf_smart_cache_export_bypass_cookies'));
-
-    printf(
-        '<div class="notice notice-warning"><p><strong>%s:</strong> %s <a href="%s" target="_blank">%s</a>. <br>%s <br><b>%s</b></p></div>',
-        esc_html__('Cloudflare Smart Cache', 'cf-smart-cache'),
-        esc_html__('The Bypass Cookie Prefixes list must match the configuration in your Cloudflare Worker (LOGIN_COOKIE_PREFIXES).', 'cf-smart-cache'),
-        $export_url,
-        esc_html__('Export as JSON for Worker', 'cf-smart-cache'),
-        esc_html__('If you update this list, you must redeploy your Worker with the new list for security.', 'cf-smart-cache'),
-        esc_html__('Failure to do so can result in private/admin content being cached and leaked to anonymous users!', 'cf-smart-cache')
-    );
-});
-
-// Export bypass cookie prefix list as JSON for Worker with improved security
-function cf_smart_cache_export_bypass_cookies_page()
-{
-    // Check user capability
-    if (!current_user_can('manage_options')) {
-        wp_die(__('You do not have sufficient permissions to access this page.', 'cf-smart-cache'));
-    }
-
-    $options     = get_option('cf_smart_cache_settings', []);
-    $cookie_list = isset($options['cf_smart_cache_bypass_cookies']) && !empty($options['cf_smart_cache_bypass_cookies'])
-        ? array_filter(array_map('trim', explode(',', $options['cf_smart_cache_bypass_cookies'])))
-        : [
-            'wordpress_logged_in',
-            'wp-',
-            'wordpress_sec',
-            'woocommerce_',
-            'PHPSESSID',
-            'session',
-            'auth',
-            'token',
-            'user',
-            'wordpress',
-            'comment_',
-            'wp_postpass',
-            'edd_',
-            'memberpress_',
-            'wpsc_',
-            'wc_',
-            'jevents_'
-        ];
-
-    $json = wp_json_encode($cookie_list, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-    printf('<div class="wrap"><h1>%s</h1>', esc_html__('Export Bypass Cookie Prefixes for Worker', 'cf-smart-cache'));
-    printf('<p>%s <code>LOGIN_COOKIE_PREFIXES</code>:</p>', esc_html__('Copy the following JSON array and paste it into your Worker as', 'cf-smart-cache'));
-    printf('<textarea rows="10" cols="80" readonly>%s</textarea>', esc_textarea($json));
-    printf('<p><a href="%s">%s</a></p>', esc_url(admin_url('options-general.php?page=cf_smart_cache')), esc_html__('Back to Settings', 'cf-smart-cache'));
-    echo '</div>';
-}
-add_action('admin_menu', function ()
-{
-    add_submenu_page(
-        null,
-        'Export Bypass Cookie Prefixes',
-        'Export Bypass Cookie Prefixes',
-        'manage_options',
-        'cf_smart_cache_export_bypass_cookies',
-        'cf_smart_cache_export_bypass_cookies_page'
-    );
-});
+// ...existing code...
 // ===================== Admin Notice for Missing Config =====================
 add_action('admin_notices', function ()
 {
