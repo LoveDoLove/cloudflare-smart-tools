@@ -9,30 +9,35 @@ CF Smart Cache is a sophisticated WordPress plugin that transforms your website'
 ## 🎯 Key Features
 
 ### ⚡ Edge HTML Caching
+
 - **Edge-level caching** for maximum performance
 - **Intelligent cache management** with automatic purging
 - **Selective caching** based on content types and user roles
 - **Global CDN delivery** through Cloudflare's network
 
 ### 🔄 Automatic Cache Purging
+
 - **Smart purging** on content updates
 - **Dependency tracking** (posts, categories, tags)
 - **Bulk operations** support
 - **Scheduled purging** capabilities
 
 ### 🛡️ Advanced Security
+
 - **API Token authentication** (recommended)
 - **Global API Key support** (legacy)
 - **Secure credential storage**
 - **Permission-based access control**
 
 ### 📊 Comprehensive Logging
+
 - **Detailed operation logs**
 - **Performance metrics**
 - **Error tracking and debugging**
 - **Cache analytics dashboard**
 
 ### 🎛️ Admin Controls
+
 - **Intuitive dashboard interface**
 - **One-click cache operations**
 - **Bulk cache management**
@@ -59,12 +64,14 @@ graph TB
 ### Method 1: Manual Installation
 
 1. **Download the Plugin**
+
    ```bash
    git clone https://github.com/LoveDoLove/cloudflare-smart-tools.git
    cd cloudflare-smart-tools
    ```
 
 2. **Copy to WordPress**
+
    ```bash
    cp -r cf-smart-cache /path/to/wordpress/wp-content/plugins/
    ```
@@ -87,6 +94,7 @@ graph TB
 ### Step 1: Cloudflare API Setup
 
 #### Option A: API Token (Recommended)
+
 1. Go to [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
 2. Click **"Create Token"**
 3. Use the **"Zone:Cache Purge"** template
@@ -96,6 +104,7 @@ graph TB
 5. Copy the generated token
 
 #### Option B: Global API Key (Legacy)
+
 1. Go to [Cloudflare API Keys](https://dash.cloudflare.com/profile/api-tokens)
 2. Copy your **Global API Key**
 3. Note your account email address
@@ -103,9 +112,11 @@ graph TB
 ### Step 2: Plugin Configuration
 
 1. **Access Plugin Settings**
+
    - Go to **WordPress Admin** → **Settings** → **CF Smart Cache**
 
 2. **Basic Configuration**
+
    ```
    Cloudflare Email: your-email@example.com (if using Global API Key)
    API Token/Key: your-api-token-or-global-key
@@ -123,6 +134,7 @@ graph TB
 ### Step 3: Verification
 
 1. **Test Cache Purging**
+
    - Edit and update a post
    - Check plugin logs for successful purge operations
 
@@ -137,12 +149,14 @@ graph TB
 The CF Smart Cache dashboard provides comprehensive control over your caching operations:
 
 #### Cache Status Widget
+
 - **Current cache status** across your site
 - **Real-time hit/miss ratios**
 - **Total cached pages** count
 - **Last purge activity** timestamp
 
 #### Quick Actions
+
 - **🔄 Purge All Cache** - Clear entire site cache
 - **🎯 Purge Single URL** - Clear specific page cache
 - **📊 View Analytics** - Access detailed performance metrics
@@ -153,12 +167,14 @@ The CF Smart Cache dashboard provides comprehensive control over your caching op
 CF Smart Cache automatically purges cache when:
 
 #### Content Updates
+
 - **Post published/updated** → Purges post page, homepage, category, and tag pages
 - **Comment approved** → Purges post page and related archives
 - **Category/tag modified** → Purges taxonomy pages and affected posts
 - **Menu changes** → Purges pages using the modified menu
 
 #### User Actions
+
 - **Theme switched** → Purges entire cache
 - **Plugin activated/deactivated** → Purges entire cache
 - **Widget updated** → Purges affected pages
@@ -166,6 +182,7 @@ CF Smart Cache automatically purges cache when:
 ### Manual Cache Management
 
 #### Bulk Operations
+
 ```php
 // Purge multiple URLs
 $urls = [
@@ -177,6 +194,7 @@ cf_smart_cache_purge_urls($urls);
 ```
 
 #### Selective Purging
+
 ```php
 // Purge by post ID
 cf_smart_cache_purge_post(123);
@@ -193,6 +211,7 @@ cf_smart_cache_purge_tag(10);
 ### Custom Cache Rules
 
 #### Exclude Specific Pages
+
 ```php
 // In your theme's functions.php
 add_filter('cf_smart_cache_exclude_urls', function($excluded_urls) {
@@ -203,6 +222,7 @@ add_filter('cf_smart_cache_exclude_urls', function($excluded_urls) {
 ```
 
 #### Custom Cache TTL
+
 ```php
 // Set different TTL for different content types
 add_filter('cf_smart_cache_ttl', function($ttl, $post_type) {
@@ -219,41 +239,46 @@ add_filter('cf_smart_cache_ttl', function($ttl, $post_type) {
 ### Integration with Cloudflare Workers
 
 #### Worker Script Example
+
 ```javascript
 // Cloudflare Worker for advanced caching logic
-addEventListener('fetch', event => {
+addEventListener("fetch", (event) => {
   event.respondWith(handleRequest(event.request));
 });
 
 async function handleRequest(request) {
   const url = new URL(request.url);
-  
+
   // Check for bypass cookies
-  const bypassCookies = ['wordpress_logged_in_', 'wp-postpass_', 'comment_author_'];
-  const cookies = request.headers.get('Cookie') || '';
-  
+  const bypassCookies = [
+    "wordpress_logged_in_",
+    "wp-postpass_",
+    "comment_author_",
+  ];
+  const cookies = request.headers.get("Cookie") || "";
+
   for (const bypassCookie of bypassCookies) {
     if (cookies.includes(bypassCookie)) {
       // Bypass cache for logged-in users
       return fetch(request);
     }
   }
-  
+
   // Cache for anonymous users
   const cacheKey = new Request(url, request);
   const cache = caches.default;
-  
+
   let response = await cache.match(cacheKey);
   if (!response) {
     response = await fetch(request);
-    
+
     // Cache successful responses
     if (response.status === 200) {
       const cacheResponse = response.clone();
       event.waitUntil(cache.put(cacheKey, cacheResponse));
     }
   }
-  
+
   return response;
 }
 ```
@@ -261,6 +286,7 @@ async function handleRequest(request) {
 ### Database Optimization
 
 #### Cache Analytics Table
+
 The plugin creates a custom table for analytics:
 
 ```sql
@@ -282,12 +308,14 @@ CREATE TABLE wp_cf_smart_cache_analytics (
 ### Key Metrics Dashboard
 
 #### Cache Performance
+
 - **Hit Rate**: Percentage of requests served from cache
 - **Miss Rate**: Percentage of requests requiring origin fetch
 - **Purge Frequency**: How often cache is being cleared
 - **Response Times**: Average response times for cached vs uncached requests
 
 #### Analytics Integration
+
 ```php
 // Custom analytics tracking
 add_action('cf_smart_cache_purge_complete', function($urls, $response) {
@@ -304,33 +332,36 @@ add_action('cf_smart_cache_purge_complete', function($urls, $response) {
 
 ### Performance Benchmarks
 
-| Metric | Before CF Smart Cache | After CF Smart Cache | Improvement |
-|--------|----------------------|----------------------|-------------|
-| **TTFB** | 800ms | 120ms | 85% faster |
-| **Page Load** | 2.1s | 0.6s | 71% faster |
-| **Server Load** | High | Low | 60% reduction |
-| **Bandwidth** | 100GB/month | 40GB/month | 60% savings |
+| Metric          | Before CF Smart Cache | After CF Smart Cache | Improvement   |
+| --------------- | --------------------- | -------------------- | ------------- |
+| **TTFB**        | 800ms                 | 120ms                | 85% faster    |
+| **Page Load**   | 2.1s                  | 0.6s                 | 71% faster    |
+| **Server Load** | High                  | Low                  | 60% reduction |
+| **Bandwidth**   | 100GB/month           | 40GB/month           | 60% savings   |
 
 ## 🛡️ Security Features
 
 ### API Security
+
 - **Token-based authentication** (preferred over Global API Key)
 - **Scope-limited permissions** (only cache purge capabilities)
 - **Encrypted credential storage** in WordPress database
 - **Input validation and sanitization** for all user inputs
 
 ### Access Control
+
 ```php
 // Role-based cache management
 add_filter('cf_smart_cache_user_can_purge', function($can_purge, $user_id) {
     $user = get_user_by('id', $user_id);
-    
+
     // Only editors and above can manually purge cache
     return user_can($user, 'edit_pages');
 }, 10, 2);
 ```
 
 ### Security Headers
+
 ```php
 // Add security headers to cached responses
 add_filter('cf_smart_cache_response_headers', function($headers) {
@@ -346,8 +377,10 @@ add_filter('cf_smart_cache_response_headers', function($headers) {
 ### Common Issues
 
 #### Cache Not Purging
+
 **Symptoms**: Updates not reflecting on frontend
 **Solutions**:
+
 1. Verify API credentials in plugin settings
 2. Check Cloudflare Zone ID is correct
 3. Review plugin logs for API errors
@@ -363,16 +396,20 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
 ```
 
 #### High Origin Load
+
 **Symptoms**: Server still experiencing high load
 **Solutions**:
+
 1. Review cache exclusion rules
 2. Check for excessive cache purging
 3. Optimize database queries
 4. Implement object caching
 
 #### Cache Serving Stale Content
+
 **Symptoms**: Old content showing after updates
 **Solutions**:
+
 1. Verify automatic purging is working
 2. Check for cache TTL settings
 3. Review Worker script logic
@@ -391,6 +428,7 @@ define('CF_SMART_CACHE_DEBUG', true);
 ```
 
 ### Log Analysis
+
 ```bash
 # Monitor WordPress debug logs
 tail -f /path/to/wordpress/wp-content/debug.log | grep "CF Smart Cache"
@@ -407,6 +445,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache" 
 ### From Other Cache Plugins
 
 #### WP Rocket Migration
+
 ```php
 // Disable WP Rocket's cache clearing
 add_filter('rocket_clean_domain', '__return_false');
@@ -421,6 +460,7 @@ add_action('init', function() {
 ```
 
 #### W3 Total Cache Migration
+
 ```php
 // Replace W3TC purging with CF Smart Cache
 add_action('w3tc_purge_post', function($post_id) {
@@ -452,6 +492,7 @@ add_filter('cf_smart_cache_purge_urls', function($urls, $blog_id) {
 ### Hooks and Filters
 
 #### Actions
+
 ```php
 // Before cache purge
 do_action('cf_smart_cache_before_purge', $urls);
@@ -464,6 +505,7 @@ do_action('cf_smart_cache_api_error', $error_message);
 ```
 
 #### Filters
+
 ```php
 // Modify URLs before purging
 apply_filters('cf_smart_cache_purge_urls', $urls, $post_id);
@@ -478,6 +520,7 @@ apply_filters('cf_smart_cache_api_headers', $headers);
 ### Custom Functions
 
 #### Programmatic Cache Control
+
 ```php
 // Purge specific URLs
 cf_smart_cache_purge_urls(['https://example.com/page1/', 'https://example.com/page2/']);
@@ -497,26 +540,29 @@ $stats = cf_smart_cache_get_statistics();
 ### Best Practices
 
 #### Cache Strategy
+
 1. **Use long TTL** for static content (24+ hours)
 2. **Implement smart purging** rather than frequent full purges
 3. **Exclude dynamic pages** from caching
 4. **Use Worker scripts** for advanced logic
 
 #### Database Optimization
+
 ```php
 // Optimize analytics table
 add_action('wp_scheduled_delete', function() {
     global $wpdb;
-    
+
     // Keep only last 30 days of analytics
     $wpdb->query($wpdb->prepare("
-        DELETE FROM {$wpdb->prefix}cf_smart_cache_analytics 
+        DELETE FROM {$wpdb->prefix}cf_smart_cache_analytics
         WHERE timestamp < %s
     ", date('Y-m-d H:i:s', strtotime('-30 days'))));
 });
 ```
 
 #### Memory Management
+
 ```php
 // Batch URL processing for large sites
 add_filter('cf_smart_cache_batch_size', function($batch_size) {
@@ -534,13 +580,9 @@ We welcome contributions! Please see our [Contributing Guidelines](../contributi
 
 ## 🙏 Acknowledgments
 
-- **Cloudflare Team** for their excellent API and platform
-- **WordPress Community** for continuous feedback and testing
-- **Plugin Contributors** who helped shape this tool
-- **Beta Testers** who provided valuable insights
-
----
-
 **Ready to supercharge your WordPress site with edge caching?**
 
 [🚀 Download Plugin](https://github.com/LoveDoLove/cloudflare-smart-tools/tree/main/cf-smart-cache) | [📖 Installation Guide](../installation.md) | [🆘 Get Support](https://github.com/LoveDoLove/cloudflare-smart-tools/issues)
+**Ready to supercharge your WordPress site with edge caching?**
+
+[🏠 Back to Home](/)

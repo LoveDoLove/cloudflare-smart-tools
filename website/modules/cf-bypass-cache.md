@@ -17,6 +17,7 @@ CF Bypass Cache provides a comprehensive collection of ready-to-use Cloudflare c
 ## 📦 Available Rule Sets
 
 ### 🎯 All-in-One Rules
+
 **Universal cache bypass rules for comprehensive coverage**
 
 A complete set of cache bypass rules that covers most common scenarios across different platforms.
@@ -47,6 +48,7 @@ or (http.cookie contains "user")
 ```
 
 **Use Cases:**
+
 - Multi-platform websites
 - Quick universal setup
 - Basic protection needs
@@ -54,6 +56,7 @@ or (http.cookie contains "user")
 [📖 Full Documentation](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/all-in-one-bypass-cache.rules.md) | [📋 Copy Rules](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/all-in-one-bypass-cache.rules)
 
 ### 🌐 General Web Applications
+
 **Universal rules for most web applications**
 
 Comprehensive cache bypass rules that work with most web frameworks and content management systems.
@@ -75,6 +78,7 @@ Comprehensive cache bypass rules that work with most web frameworks and content 
 ```
 
 **Features:**
+
 - Generic admin area protection
 - Session-based bypassing
 - Query parameter triggers
@@ -83,6 +87,7 @@ Comprehensive cache bypass rules that work with most web frameworks and content 
 [📖 Full Documentation](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/general-bypass-cache.rules.md) | [📋 Copy Rules](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/general-bypass-cache.rules)
 
 ### 📝 WordPress Specific
+
 **Highly optimized rules for WordPress sites**
 
 Specialized cache bypass rules designed specifically for WordPress, covering all common scenarios including multisite installations.
@@ -102,6 +107,7 @@ Specialized cache bypass rules designed specifically for WordPress, covering all
 ```
 
 **WordPress Features:**
+
 - Admin dashboard protection
 - Preview functionality
 - Customizer support
@@ -115,27 +121,33 @@ Specialized cache bypass rules designed specifically for WordPress, covering all
 ## 🚀 Quick Start
 
 ### Step 1: Choose Your Rule Set
+
 Select the appropriate rule set based on your platform:
+
 - **WordPress sites**: Use WordPress-specific rules
-- **General web apps**: Use general application rules  
+- **General web apps**: Use general application rules
 - **Mixed environments**: Use all-in-one rules
 
 ### Step 2: Access Cloudflare Dashboard
+
 1. Log in to your [Cloudflare Dashboard](https://dash.cloudflare.com)
 2. Select your domain
 3. Navigate to **Rules** → **Cache Rules**
 
 ### Step 3: Create New Rule
+
 1. Click **"Create rule"**
 2. Give your rule a descriptive name (e.g., "Bypass Cache for Dynamic Content")
 3. Select **"Custom filter expression"**
 
 ### Step 4: Add Expression
+
 1. Copy the desired rule from our documentation
 2. Paste it into the expression builder
 3. Set the action to **"Bypass cache"**
 
 ### Step 5: Test & Deploy
+
 1. Test the rule with a few URLs
 2. Save and deploy the rule
 3. Monitor cache hit rates to ensure proper functionality
@@ -143,6 +155,7 @@ Select the appropriate rule set based on your platform:
 ## 🛠️ Configuration Guide
 
 ### Cache Rule Priority
+
 Ensure your bypass rules have higher priority than general caching rules:
 
 ```
@@ -154,19 +167,22 @@ Priority 3: Default Cloudflare Behavior
 ### Common Customizations
 
 #### Add Custom Paths
+
 ```cloudflare
 # Add your custom admin path
 http.request.uri.path contains "/custom-admin" or
 ```
 
 #### Exclude Specific File Types
+
 ```cloudflare
 # Don't bypass cache for images in admin
-not (http.request.uri.path contains "/wp-admin" and 
+not (http.request.uri.path contains "/wp-admin" and
      http.request.uri.path matches ".*\\.(jpg|jpeg|png|gif|webp)$")
 ```
 
 #### Add Custom Cookies
+
 ```cloudflare
 # Add your application's session cookie
 http.cookie contains "my_app_session" or
@@ -175,27 +191,31 @@ http.cookie contains "my_app_session" or
 ## 📊 Performance Impact
 
 ### Before Implementation
+
 - **Dynamic Content**: Cached incorrectly
 - **User Experience**: Stale admin pages, login issues
 - **Security**: Potential cache poisoning risks
 
 ### After Implementation
+
 - **Cache Hit Rate**: Optimal (90%+ for static content)
 - **Dynamic Content**: Always fresh
 - **User Experience**: Seamless admin/user interactions
 - **Security**: Protected against cache-based attacks
 
 ### Performance Metrics
-| Metric | Improvement |
-|--------|------------|
-| Admin Load Time | ✅ Consistent |
-| User Session Handling | ✅ Reliable |
-| Cache Hit Rate | ✅ Maintained |
-| Security Posture | ✅ Enhanced |
+
+| Metric                | Improvement   |
+| --------------------- | ------------- |
+| Admin Load Time       | ✅ Consistent |
+| User Session Handling | ✅ Reliable   |
+| Cache Hit Rate        | ✅ Maintained |
+| Security Posture      | ✅ Enhanced   |
 
 ## 🔧 Advanced Configuration
 
 ### Multiple Environment Setup
+
 For staging and production environments:
 
 ```cloudflare
@@ -205,6 +225,7 @@ For staging and production environments:
 ```
 
 ### Geographic Bypassing
+
 Bypass cache for specific regions:
 
 ```cloudflare
@@ -213,6 +234,7 @@ Bypass cache for specific regions:
 ```
 
 ### Time-based Rules
+
 Bypass cache during specific hours:
 
 ```cloudflare
@@ -223,6 +245,7 @@ Bypass cache during specific hours:
 ## ⚠️ Best Practices
 
 ### Do's ✅
+
 - **Test thoroughly** before deploying to production
 - **Monitor cache hit rates** after implementation
 - **Use specific paths** rather than broad wildcards
@@ -230,6 +253,7 @@ Bypass cache during specific hours:
 - **Review rules periodically** for optimization
 
 ### Don'ts ❌
+
 - **Don't bypass cache for static assets** (CSS, JS, images)
 - **Don't use overly broad rules** that hurt performance
 - **Don't forget to test user flows** after implementation
@@ -241,30 +265,37 @@ Bypass cache during specific hours:
 ### Common Issues
 
 #### Rule Not Working
+
 **Symptoms**: Dynamic content still being cached
 **Solutions**:
+
 1. Check rule priority order
 2. Verify expression syntax
 3. Test with cache purge
 4. Check for conflicting rules
 
 #### Too Many Cache Misses
+
 **Symptoms**: Decreased cache hit rate
 **Solutions**:
+
 1. Review rule specificity
 2. Remove overly broad patterns
 3. Use more targeted cookie checks
 4. Monitor with Cloudflare Analytics
 
 #### Admin Area Issues
+
 **Symptoms**: Admin pages showing cached content
 **Solutions**:
+
 1. Clear browser cache
 2. Check cookie-based rules
 3. Verify admin path patterns
 4. Test in incognito mode
 
 ### Debug Mode
+
 Enable debug mode to see rule matching:
 
 ```cloudflare
@@ -275,13 +306,16 @@ http.request.headers["cf-debug-bypass"][0] eq "true"
 ## 📈 Monitoring & Analytics
 
 ### Key Metrics to Track
+
 - **Cache Hit Rate**: Should remain high (85%+)
 - **Origin Response Time**: Should be consistent
 - **Error Rate**: Should not increase
 - **User Session Issues**: Should decrease
 
 ### Cloudflare Analytics
+
 Monitor these dashboard sections:
+
 1. **Caching** → **Cache Performance**
 2. **Rules** → **Cache Rules Analytics**
 3. **Security** → **Security Events**
@@ -289,6 +323,7 @@ Monitor these dashboard sections:
 ## 🔄 Migration Guide
 
 ### From Page Rules to Cache Rules
+
 Legacy Page Rules users should migrate to the new Cache Rules:
 
 ```cloudflare
@@ -300,6 +335,7 @@ http.request.uri.path contains "/wp-admin"
 ```
 
 ### Benefits of Migration:
+
 - Better performance
 - More flexible expressions
 - Improved analytics
@@ -308,11 +344,13 @@ http.request.uri.path contains "/wp-admin"
 ## 📚 Additional Resources
 
 ### Cloudflare Documentation
+
 - [Cache Rules Documentation](https://developers.cloudflare.com/cache/how-to/cache-rules/)
 - [Rules Language Reference](https://developers.cloudflare.com/ruleset-engine/rules-language/)
 - [Expression Builder](https://developers.cloudflare.com/ruleset-engine/rules-language/expressions/)
 
 ### Community Resources
+
 - [Cloudflare Community](https://community.cloudflare.com/)
 - [WordPress Performance Guide](https://wordpress.org/support/article/optimization/)
 - [Web Performance Best Practices](https://web.dev/performance/)
@@ -322,11 +360,12 @@ http.request.uri.path contains "/wp-admin"
 Help us improve these cache rules:
 
 1. **Test rules** with your setup
-2. **Report issues** with specific configurations  
+2. **Report issues** with specific configurations
 3. **Suggest improvements** for better compatibility
 4. **Share your custom rules** that others might benefit from
 
 ### Contribution Guidelines
+
 - Test rules thoroughly before submitting
 - Provide clear documentation for new rules
 - Include use cases and examples
@@ -338,7 +377,6 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ## ✨ Credits
 
-- **Cloudflare Team** for the amazing platform and documentation
-- **Community Contributors** for testing and feedback
-- **WordPress Community** for insights into common patterns
-- **Web Performance Experts** for optimization guidance
+---
+
+[🏠 Back to Home](/)
