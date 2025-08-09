@@ -143,11 +143,19 @@ function cf_smart_cache_fetch_zones()
  */
 function cf_smart_cache_api_token_render()
 {
-    $options = get_option('cf_smart_cache_settings', []);
-    $value   = isset($options['cf_smart_cache_api_token']) ? esc_attr($options['cf_smart_cache_api_token']) : '';
+    $options  = get_option('cf_smart_cache_settings', []);
+    $value    = isset($options['cf_smart_cache_api_token']) ? esc_attr($options['cf_smart_cache_api_token']) : '';
+    $input_id = 'cf_smart_cache_api_token';
+    // Password field with toggle button (eye icon), minimal inline JS, accessible
     printf(
-        '<input type="text" name="cf_smart_cache_settings[cf_smart_cache_api_token]" value="%s" class="regular-text" autocomplete="off">',
-        $value
+        '<div style="position:relative;display:inline-block;max-width:350px;">' .
+        '<input type="password" id="%1$s" name="cf_smart_cache_settings[cf_smart_cache_api_token]" value="%2$s" class="regular-text" autocomplete="off" aria-label="%3$s" style="padding-right:2.2em;">' .
+        '<button type="button" tabindex="0" aria-label="%4$s" onclick="var f=document.getElementById(\'%1$s\');var b=this;f.type=f.type===\'password\'?\'text\':\'password\';b.setAttribute(\'aria-pressed\',f.type===\'text\');b.innerHTML=f.type===\'password\'?\'&#128065;\':\'&#128064;\';" style="position:absolute;right:0.3em;top:50%%;transform:translateY(-50%%);background:none;border:none;padding:0;margin:0;cursor:pointer;font-size:1.2em;line-height:1;" aria-pressed="false">&#128065;</button>' .
+        '</div>',
+        esc_attr($input_id),
+        $value,
+        esc_attr__('API Token', 'cf-smart-cache'),
+        esc_attr__('Show or hide API token', 'cf-smart-cache')
     );
     printf(
         '<p class="description">%s <a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
