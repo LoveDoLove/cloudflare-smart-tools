@@ -294,7 +294,8 @@ function cf_smart_cache_purge_all_cache()
         set_transient('cf_smart_cache_notice_' . get_current_user_id(), 'Error: Zone ID not configured.', 45);
         return;
     }
-    $api_url            = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache";
+    $api_url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache";
+    cf_smart_cache_check_rate_limit();
     $response           = wp_remote_post($api_url, [
         'method'  => 'POST',
         'headers' => $headers,

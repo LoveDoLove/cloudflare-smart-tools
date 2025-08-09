@@ -315,13 +315,14 @@ function cf_smart_cache_batch_purge($urls_to_purge)
         ];
         $headers['Authorization'] = 'Bearer ' . $api_token;
         $body                     = json_encode(['files' => $chunk]);
-        $response                 = wp_remote_post($api_url, [
+        cf_smart_cache_check_rate_limit();
+        $response  = wp_remote_post($api_url, [
             'headers' => $headers,
             'body'    => $body,
             'timeout' => 15
         ]);
-        $validated                = cf_smart_cache_validate_api_response($response, 'batch purge');
-        $results[]                = $validated;
+        $validated = cf_smart_cache_validate_api_response($response, 'batch purge');
+        $results[] = $validated;
         if (!is_wp_error($validated)) {
             do_action('cf_smart_cache_after_batch_purge', $chunk, $validated);
         }
@@ -351,6 +352,7 @@ function cf_smart_cache_execute_purge($urls_to_purge)
     $urls_to_purge = array_values(array_unique($urls_to_purge));
     $api_url       = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache";
     cf_smart_cache_log(sprintf('Executing purge for %d URLs: %s', count($urls_to_purge), implode(', ', $urls_to_purge)));
+    cf_smart_cache_check_rate_limit();
     $response           = wp_remote_post($api_url, [
         'method'  => 'POST',
         'headers' => $headers,
