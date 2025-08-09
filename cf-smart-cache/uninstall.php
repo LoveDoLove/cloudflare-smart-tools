@@ -14,10 +14,10 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
-// Security check - ensure this is a proper uninstall
-if (!current_user_can('delete_plugins')) {
-    return;
-}
+// Execute cleanup on uninstall
+cf_smart_cache_uninstall_cleanup();
+
+// No additional capability check needed; WordPress core ensures proper context.
 
 /**
  * Clean up all plugin data
