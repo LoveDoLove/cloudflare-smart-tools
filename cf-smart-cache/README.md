@@ -10,23 +10,23 @@
 
 <br />
 <div align="center">
-  <a href="https://github.com/LoveDoLove/cloudflare-smart-tools">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+  <a href="https://github.com/LoveDoLove/cloudflare-smart-cache">
+    <img src="../images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
 <h3 align="center">Cloudflare Smart Cache</h3>
 
   <p align="center">
-    Powerful all-in-one Cloudflare cache solution for WordPress: edge HTML caching, automatic purging on post/category changes, advanced admin controls, API token support, and comprehensive logging.
+    Powerful all-in-one Cloudflare cache solution for WordPress: edge HTML caching, automatic purging, advanced admin controls, API token support, and comprehensive logging.
     <br />
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/tree/main/cf-smart-cache"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/tree/main/cf-smart-cache">View Demo</a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache">View Demo</a>
     &middot;
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
-    <a href="https://github.com/LoveDoLove/cloudflare-smart-tools/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/LoveDoLove/cloudflare-smart-cache/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
@@ -37,7 +37,6 @@
     <li>
       <a href="#about-the-project">About The Project</a>
       <ul>
-        <li><a href="#features">Features</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
@@ -46,7 +45,6 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#installation">Installation</a></li>
-        <li><a href="#uninstalling">Uninstalling</a></li>
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
@@ -60,80 +58,77 @@
 
 ## About The Project
 
-Cloudflare Smart Cache is a WordPress plugin that provides advanced edge HTML caching via Cloudflare, with automatic cache purging on post, category, and comment changes. It offers robust admin controls, API token support, and detailed logging for easy debugging and monitoring.
+Cloudflare Smart Cache is a robust WordPress plugin that brings advanced Cloudflare cache management directly to your admin dashboard. It enables edge HTML caching, automatic cache purging on post/category changes, API token support, advanced admin controls, and detailed logging. Designed for performance, reliability, and ease of use.
 
-### Features
+**Key Features:**
 
-- Edge HTML caching for public pages
-- Automatic cache purging on post/category/comment changes
-- Advanced admin settings page
+- Edge HTML caching for maximum speed
+- Automatic cache purging on content changes
+- Admin UI for cache management and settings
 - API token and zone ID support
-- Comprehensive logging (WP_DEBUG compatible)
-- Security headers following Cloudflare best practices
-- Internationalization support
-- Easy uninstall and cleanup
+- Comprehensive logging and diagnostics
+- Clean uninstall with full data cleanup
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
-- PHP (WordPress plugin)
-- Cloudflare API
+- [WordPress](https://wordpress.org/)
+- [PHP](https://www.php.net/)
+- [Cloudflare API](https://api.cloudflare.com/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting Started
 
-To get a local copy up and running, follow these steps.
+To use Cloudflare Smart Cache, you need a WordPress site and a Cloudflare account with API token and zone ID.
 
 ### Prerequisites
 
 - WordPress 5.0 or higher
 - PHP 7.4 or higher
-- Cloudflare account and API token
+- Cloudflare account with API token and zone ID
 
 ### Installation
 
-1. Clone the repo:
+1. Download or clone this repository:
    ```sh
-   git clone https://github.com/LoveDoLove/cloudflare-smart-tools.git
+   git clone https://github.com/LoveDoLove/cloudflare-smart-cache.git
    ```
-2. Copy the `cf-smart-cache` directory into your WordPress `wp-content/plugins` folder.
+2. Upload the `cf-smart-cache` folder to your WordPress `/wp-content/plugins/` directory.
 3. Activate the plugin via the WordPress admin dashboard.
-4. Go to **Settings > CF Smart Cache** and enter your Cloudflare API token and Zone ID.
+4. Go to the plugin settings page and enter your Cloudflare API token and zone ID.
 5. Configure additional options as needed.
-
-### Uninstalling
-
-To completely remove the plugin and all its data:
-
-- Deactivate and delete the plugin from the WordPress admin.
-- The uninstall script will clean up all plugin options, transients, and logs from the database.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
 
-- Once activated, the plugin will automatically manage Cloudflare edge caching and purge cache on relevant WordPress events.
-- Use the admin settings page to configure API credentials and zone selection.
-- Check logs via WP_DEBUG for troubleshooting.
-
-_For more details, see the [Documentation](https://github.com/LoveDoLove/cloudflare-smart-tools/tree/main/cf-smart-cache)_
+- Manage cache settings and purge cache from the WordPress admin panel.
+- Automatic purging occurs on post, page, or category changes.
+- View logs and diagnostics for cache operations.
+- For advanced usage, see the [Documentation](https://github.com/LoveDoLove/cloudflare-smart-cache).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Roadmap
 
-- [ ] Improved UI for admin settings
-- [ ] Support for multiple Cloudflare zones
-- [ ] Enhanced logging and analytics
-- [ ] Integration with WooCommerce and other plugins
+- [x] Edge HTML caching
+- [x] Automatic cache purging
+- [x] Admin UI for cache management
+- [x] API token support
+- [x] Logging and diagnostics
+- [ ] Multisite support
+- [ ] Advanced cache rules
+- [ ] More granular purge options
 
-See the [open issues](https://github.com/LoveDoLove/cloudflare-smart-tools/issues) for a full list of proposed features and known issues.
+See the [open issues](https://github.com/LoveDoLove/cloudflare-smart-cache/issues) for a full list of proposed features and known issues.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contributing
 
-Contributions are welcome! Please fork the repo and submit a pull request, or open an issue for suggestions.
+Contributions are welcome! Please fork the repo and submit a pull request, or open an issue for suggestions and bug reports.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -145,8 +140,8 @@ Contributions are welcome! Please fork the repo and submit a pull request, or op
 
 ### Top contributors:
 
-<a href="https://github.com/LoveDoLove/cloudflare-smart-tools/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=LoveDoLove/cloudflare-smart-tools" alt="contrib.rocks image" />
+<a href="https://github.com/LoveDoLove/cloudflare-smart-cache/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=LoveDoLove/cloudflare-smart-cache" alt="contrib.rocks image" />
 </a>
 
 ## License
@@ -159,30 +154,30 @@ Distributed under the MIT License. See [`LICENSE`](../LICENSE) for more informat
 
 LoveDoLove - [@LoveDoLove](https://github.com/LoveDoLove)
 
-Project Link: [https://github.com/LoveDoLove/cloudflare-smart-tools/tree/main/cf-smart-cache](https://github.com/LoveDoLove/cloudflare-smart-tools/tree/main/cf-smart-cache)
+Project Link: [https://github.com/LoveDoLove/cloudflare-smart-cache](https://github.com/LoveDoLove/cloudflare-smart-cache)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Acknowledgments
 
 - [Cloudflare](https://www.cloudflare.com/)
-- [WordPress](https://wordpress.org/)
-- [Best README Template](https://github.com/othneildrew/Best-README-Template)
+- [WordPress Plugin Handbook](https://developer.wordpress.org/plugins/)
+- [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
-[contributors-shield]: https://img.shields.io/github/contributors/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
-[contributors-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
-[forks-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/network/members
-[stars-shield]: https://img.shields.io/github/stars/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
-[stars-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/stargazers
-[issues-shield]: https://img.shields.io/github/issues/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
-[issues-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/issues
-[license-shield]: https://img.shields.io/github/license/LoveDoLove/cloudflare-smart-tools.svg?style=for-the-badge
-[license-url]: https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/LoveDoLove/cloudflare-smart-cache.svg?style=for-the-badge
+[contributors-url]: https://github.com/LoveDoLove/cloudflare-smart-cache/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/LoveDoLove/cloudflare-smart-cache.svg?style=for-the-badge
+[forks-url]: https://github.com/LoveDoLove/cloudflare-smart-cache/network/members
+[stars-shield]: https://img.shields.io/github/stars/LoveDoLove/cloudflare-smart-cache.svg?style=for-the-badge
+[stars-url]: https://github.com/LoveDoLove/cloudflare-smart-cache/stargazers
+[issues-shield]: https://img.shields.io/github/issues/LoveDoLove/cloudflare-smart-cache.svg?style=for-the-badge
+[issues-url]: https://github.com/LoveDoLove/cloudflare-smart-cache/issues
+[license-shield]: https://img.shields.io/github/license/LoveDoLove/cloudflare-smart-cache.svg?style=for-the-badge
+[license-url]: https://github.com/LoveDoLove/cloudflare-smart-cache/blob/master/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/linkedin_username
-[product-screenshot]: images/screenshot.png
+[linkedin-url]: https://linkedin.com/in/
+[product-screenshot]: ../images/logo.png
