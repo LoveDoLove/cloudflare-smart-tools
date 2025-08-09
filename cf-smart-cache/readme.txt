@@ -2,8 +2,8 @@
 Contributors: (add contributors)
 Tags: cache, cloudflare, performance
 Requires at least: 5.0
-Tested up to: 6.5
-Stable tag: 1.0.0
+Tested up to: 2.0.6
+Stable tag: 2.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,9 +44,17 @@ Replace the plugin folder with the new version, ensuring you retain your setting
 1. Admin settings page for CF Smart Cache.
 
 == Changelog ==
+= 2.0.6 =
+* Refactored plugin to follow the latest WordPress-compliant folder structure.
+* Improved maintainability, modularity, and compatibility.
+* General codebase refactor for better standards compliance.
+
 = 1.0.0 =
 * Initial release with WordPress-compliant structure.
 
 == Upgrade Notice ==
+= 2.0.6 =
+Major refactor: new WordPress-compliant folder structure and improved codebase maintainability.
+
 = 1.0.0 =
 Initial release with new folder structure.
