@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # Cloudflare Smart Cache Workers (DEPRECATED)
 
-> **Warning:** The `cf-smart-cache-workers` folder and all files within it are now **deprecated** and should not be used for new development. See [DEPRECATED.md](../../cf-smart-cache-workers/DEPRECATED.md) for details, actionable guidance, and references.
+> **Warning:** The `cf-smart-cache-workers` folder and all files within it are now **deprecated** and should not be used for new development. See [DEPRECATED.md](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-smart-cache-workers/DEPRECATED.md) for details, actionable guidance, and references.
 
 ## What Was Here?
 

@@ -35,7 +35,7 @@ Cloudflare Smart Cache is a robust WordPress plugin that brings advanced Cloudfl
 
 ---
 
-For more details, see the [cf-smart-cache README](../../cf-smart-cache/README.md).
+For more details, see the [cf-smart-cache README](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-smart-cache/README.md).
 
 ---
 

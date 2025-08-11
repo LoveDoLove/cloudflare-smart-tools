@@ -23,12 +23,13 @@ No installation required. Simply copy the desired rule set from the documentatio
 
 ### All-in-One Rule
 
-See [all-in-one-bypass-cache.rules.md](../../cf-bypass-cache/all-in-one-bypass-cache.rules.md) for a universal rule covering most frameworks.
+See [all-in-one-bypass-cache.rules.md](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/all-in-one-bypass-cache.rules.md) for a universal rule covering most frameworks.
 
 ### Framework-Specific Rules
 
-- [General Rules](../../cf-bypass-cache/general-bypass-cache.rules.md)
-- [WordPress Rules](../../cf-bypass-cache/wordpress.rules.md)
+- [General Rules](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/general-bypass-cache.rules.md)
+- [WordPress Rules](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/wordpress.rules.md)
+- [cf-bypass-cache README](https://github.com/LoveDoLove/cloudflare-smart-tools/blob/main/cf-bypass-cache/README.md)
 
 ## Usage
 
@@ -38,8 +39,6 @@ See [all-in-one-bypass-cache.rules.md](../../cf-bypass-cache/all-in-one-bypass-c
 - Save and deploy the rule.
 
 ---
-
-For more details, see the [cf-bypass-cache README](../../cf-bypass-cache/README.md).
 
 ---
 
